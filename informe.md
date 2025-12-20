@@ -348,9 +348,8 @@ code {
   - [3.2 Desbalanceig de la classe objectiu](#32-desbalanceig-de-la-classe-objectiu)
   - [3.3 Valors perduts](#33-valors-perduts)
   - [3.4 *Outliers*](#34-outliers)
-  - [3.5 Variables categòriques](#35-variables-categòriques)
-  - [3.6 Particionat de les dades](#36-particionat-de-les-dades)
-  - [3.7 Estudi de dimensionalitat](#37-estudi-de-dimensionalitat)
+  - [3.5 Estudi de dimensionalitat](#35-estudi-de-dimensionalitat)
+  - [3.6 Partició del conjunt de dades](#36-partició-del-conjunt-de-dades)
 - [4. Ajustament de models](#4-ajustament-de-models)
   - [4.1 SVM](#41-svm)
     - [4.1.1 Preprocessament](#411-preprocessament)
@@ -786,74 +785,341 @@ Com podem veure a la Taula 1, algunes variables tenen un percentatge significati
   <table style="border-collapse: collapse; width: 100%;">
     <thead>
       <tr>
-        <th style="text-align:left; padding: 3px 5px; border-bottom: 2px solid #ddd; background-color: #333; color: white;">Variable</th>
-        <th style="padding: 3px 5px; border-bottom: 2px solid #ddd; background-color: #333; color: white;">Total Missings</th>
-        <th style="padding: 3px 5px; border-bottom: 2px solid #ddd; background-color: #333; color: white;">Percentatge (%)</th>
+        <th style="text-align:left; padding: 3px 5px; border-bottom: 2px solid #ddd;">Variable</th>
+        <th style="padding: 3px 5px; border-bottom: 2px solid #ddd;">Total Missings</th>
+        <th style="padding: 3px 5px; border-bottom: 2px solid #ddd;">Percentatge (%)</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Alkaline_phosphatase</td>
+        <td style="text-align:left; padding: 2px 5px;">Alkaline_phosphatase</td>
         <td style="padding: 2px 5px; background-color: #67000d; color: white;">2938</td>
         <td style="padding: 2px 5px; background-color: #67000d; color: white;">32.64%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Glucose</td>
+        <td style="text-align:left; padding: 2px 5px;">Glucose</td>
         <td style="padding: 2px 5px; background-color: #a50f15; color: white;">2619</td>
         <td style="padding: 2px 5px; background-color: #a50f15; color: white;">29.10%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Triglycerides</td>
+        <td style="text-align:left; padding: 2px 5px;">Triglycerides</td>
         <td style="padding: 2px 5px; background-color: #cb181d; color: white;">2453</td>
         <td style="padding: 2px 5px; background-color: #cb181d; color: white;">27.26%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Lymphocyte_count</td>
+        <td style="text-align:left; padding: 2px 5px; ">Lymphocyte_count</td>
         <td style="padding: 2px 5px; background-color: #ef3b2c; color: white;">1991</td>
         <td style="padding: 2px 5px; background-color: #ef3b2c; color: white;">22.12%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Neutrophil_count</td>
+        <td style="text-align:left; padding: 2px 5px;">Neutrophil_count</td>
         <td style="padding: 2px 5px; background-color: #fb6a4a; color: white;">1985</td>
         <td style="padding: 2px 5px; background-color: #fb6a4a; color: white;">22.06%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Duration_untreated_psychosis</td>
+        <td style="text-align:left; padding: 2px 5px;">Duration_untreated_psychosis</td>
         <td style="padding: 2px 5px; background-color: #fff5f0; color: black;">128</td>
         <td style="padding: 2px 5px; background-color: #fff5f0; color: black;">1.42%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">Polygenic_risk_score</td>
+        <td style="text-align:left; padding: 2px 5px;">Polygenic_risk_score</td>
         <td style="padding: 2px 5px; background-color: #ffffff; color: black;">1</td>
         <td style="padding: 2px 5px; background-color: #ffffff; color: black;">0.01%</td>
       </tr>
       <tr>
-        <td style="text-align:left; padding: 2px 5px; background-color: #333; color: #ccc;">IL_17A</td>
+        <td style="text-align:left; padding: 2px 5px;">IL_17A</td>
         <td style="padding: 2px 5px; background-color: #ffffff; color: black;">1</td>
         <td style="padding: 2px 5px; background-color: #ffffff; color: black;">0.01%</td>
       </tr>
     </tbody>
   </table>
-  <div class="table-caption">Taula 2: Heatmap de valors perduts per variable.</div>
+  <div class="table-caption">Taula 2: Valors perduts per variable.</div>
 </div>
 
 Experimentalment he provat d'imputar els valors perduts amb diferents tècniques, com la mitjana, mediana, KNN i regressió. Després d'avaluar el rendiment dels models amb aquestes diferents imputacions, he observat que la imputació mitjançant KNN amb k=5 ofereix els millors resultats en termes de precisió i robustesa del model. Per tant, he decidit utilitzar aquesta tècnica per gestionar els valors perduts en les variables mèdiques.
 
 ### 3.4 *Outliers*
 
-### 3.5 Variables categòriques
+He fet servir el mètode del IQR per detectar valors extrems en les variables numèriques. Aquest mètode defineix els *outliers* com aquells valors que es troben fora de l'interval $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$, on $Q1$ i $Q3$ són el primer i tercer quartil, respectivament, i $IQR$ és el rang interquartílic (Q3 - Q1). La taula resultant mostra el nombre d'*outliers* detectats per variable:
 
-### 3.6 Particionat de les dades
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:3px 3px;">Variable</th>
+        <th style="padding:3px 3px;">n outliers</th>
+        <th style="padding:3px 3px;">Outliers (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Duration_untreated_psychosis</code></b></td>
+        <td style="padding:2px 3px;">651</td>
+        <td style="padding:2px 3px;">7.23</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Age</code></b></td>
+        <td style="padding:2px 3px;">360</td>
+        <td style="padding:2px 3px;">4.00</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Polygenic_risk_score</code></b></td>
+        <td style="padding:2px 3px;">125</td>
+        <td style="padding:2px 3px;">1.39</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Ki_associative_striatum</code></b></td>
+        <td style="padding:2px 3px;">83</td>
+        <td style="padding:2px 3px;">0.92</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Ki_whole_striatum</code></b></td>
+        <td style="padding:2px 3px;">71</td>
+        <td style="padding:2px 3px;">0.79</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>CCL23</code></b></td>
+        <td style="padding:2px 3px;">59</td>
+        <td style="padding:2px 3px;">0.66</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>TWEAK</code></b></td>
+        <td style="padding:2px 3px;">58</td>
+        <td style="padding:2px 3px;">0.64</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>IL_17A</code></b></td>
+        <td style="padding:2px 3px;">57</td>
+        <td style="padding:2px 3px;">0.63</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>BMI</code></b></td>
+        <td style="padding:2px 3px;">39</td>
+        <td style="padding:2px 3px;">0.43</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>SUVRc_whole_striatum</code></b></td>
+        <td style="padding:2px 3px;">35</td>
+        <td style="padding:2px 3px;">0.39</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Neutrophil_count</code></b></td>
+        <td style="padding:2px 3px;">32</td>
+        <td style="padding:2px 3px;">0.36</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>SUVRc_associative_striatum</code></b></td>
+        <td style="padding:2px 3px;">29</td>
+        <td style="padding:2px 3px;">0.32</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Lymphocyte_count</code></b></td>
+        <td style="padding:2px 3px;">26</td>
+        <td style="padding:2px 3px;">0.29</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Alkaline_phosphatase</code></b></td>
+        <td style="padding:2px 3px;">23</td>
+        <td style="padding:2px 3px;">0.26</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Triglycerides</code></b></td>
+        <td style="padding:2px 3px;">22</td>
+        <td style="padding:2px 3px;">0.24</td>
+      </tr>
+      <tr>
+        <td style="text-align:left; padding:2px 3px;"><b><code>Glucose</code></b></td>
+        <td style="padding:2px 3px;">16</td>
+        <td style="padding:2px 3px;">0.18</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption">Taula 3: Variables amb valors extrems (outliers).</div>
+</div>
 
-### 3.7 Estudi de dimensionalitat
+Com veiem, la variable amb més outliers és `Duration_untreated_psychosis`, amb un total de 651 valors extrems, representant el 7.23% del total de mostres. Aquesta variable mostra una distribució molt asimètrica, amb una cua llarga cap a la dreta, indicant que hi ha alguns pacients amb períodes molt llargs sense tractament. Aquesta variable podria beneficiar-se d'una transformació logarítmica per reduir l'impacte dels outliers en els models predictius. El mateix passa amb la variable `Age`, que també presenta una quantitat significativa d'outliers (360 valors, 4.00%). La resta de variables tenen un nombre relativament baix d'outliers, tots per sota de l'1% del total de mostres.
+
+Per tant, he decidit no eliminar aquests outliers, ja que podrien contenir informació rellevant sobre pacients amb característiques extremes. En lloc d'això, aplicaré transformacions adequades a aquestes variables per minimitzar el seu impacte en els models predictius. Pel que fa a les altres variables amb pocs outliers, no aplicaré cap acció específica, ja que la seva presència és mínima i no afectarà significativament els resultats dels models. A més, en un context mèdic, eliminar valors extrems podria conduir a la pèrdua d'informació important sobre pacients amb condicions rares o greus, que poden ser crucials per a la predicció.
+
+### 3.5 Estudi de dimensionalitat
+
+He realitzat una anàlisi de components principals (PCA) per avaluar la dimensionalitat del conjunt de dades i identificar possibles reduccions de dimensions que puguin millorar l'eficiència dels models predictius. La PCA és una tècnica estadística que transforma les variables originals en un nou conjunt de variables no correlacionades, anomenades components principals, que capturen la major part de la variància present en les dades. Com que no tolera valors perduts, he utilitzat el conjunt de dades amb els valors imputats mitjançant KNN.
+També eliminem la variable objectiu `TRS` abans d'aplicar la PCA, ja que aquesta tècnica només s'aplica a les variables predictives i la variable `id_patient`, que és un identificador únic per a cada pacient i no aporta informació rellevant per a la predicció. L'apliquem fent ús de la lliberieria `sklearn.decomposition.PCA`, i els resultats obtinguts són els següents:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/10.png" alt="Gràfica de Scree Plot de la PCA">
+    <div class="caption">Figura 10: Gràfica de Scree Plot de la PCA</div>
+  </div>
+</div>
+
+Podem veure que calen 20 components per explicar el 95% de la variància total del conjunt de dades. Això indica que hi ha una certa redundància entre les variables originals, ja que només es necessiten 20 components per capturar la major part de la informació. No obstant això, com que el nombre original de variables no és molt alt, he decidit no reduir la dimensionalitat en aquesta fase i mantenir totes les variables originals per a l'ajustament dels models. Això permetrà als models aprofitar tota la informació disponible i potencialment millorar el rendiment predictiu.
+
+### 3.6 Partició del conjunt de dades
+
+En models de machines learning, és fonamental dividir el conjunt de dades en subconjunts d'entrenament i prova per avaluar el rendiment dels models de manera objectiva. He utilitzat una divisió del 80% per a l'entrenament i del 20% per a la prova, assegurant-me que ambdues particions mantinguin la mateixa proporció de la variable objectiu `TRS` (estratificació). Això es fa per garantir que els models es trenin i s'avaluïn en mostres representatives de totes les classes. He utilitzat la funció `train_test_split` de la biblioteca `sklearn.model_selection`, amb el paràmetre `stratify` per assegurar aquesta estratificació.
+
+Aquesta divisió es farà de manera individual en cada model, per assegurar que qualsevol preprocessament específic del model no afecti la partició dels dades.
 
 ## 4. Ajustament de models
 
+Els 3 models bàsics a ajustar són Support Vector Machine (SVM), XGBoost i una regressió logística personalitzada. A continuació es detallen els passos seguits per a cada model, incloent el preprocessament, l'ajustament del model i els resultats finals obtinguts.
+
 ### 4.1 SVM
+
+Support Vector Machine (SVM) és un model de classificació potent que busca trobar l'hiperplà que millor separa les classes en l'espai de característiques. Aquest SVM serà ajustat amb la biblioteca `sklearn.svm.SVC`, provant diferents nuclis i ajustant els hiperparàmetres mitjançant una cerca en quadrícula (`GridSearchCV`).
 
 #### 4.1.1 Preprocessament
 
+El processament de les dades per al model SVM inclou els següents passos:
+
+1. Particionem les dades:
+   Tal i com s'ha descrit a la [secció 3.6](#36-partició-del-conjunt-de-dades), dividim el conjunt de dades en un 80% per a l'entrenament i un 20% per a la prova, assegurant-nos que ambdues particions mantinguin la mateixa proporció de la variable objectiu `TRS`:
+
+   ```python
+   X_train_svm, X_test_svm, y_train_svm, y_test_svm = train_test_split(
+       X, y, test_size=0.2, random_state=42, stratify=y
+   )
+   ```
+
+2. Codificació de variables categòriques:
+   Utilitzem l'encodificació One-Hot per a les variables categòriques, que són `Ethnicity` i `CYP2D6_metabolic_phenotype`. Això crea variables binàries per a cada categoria, permetent que el model SVM les utilitzi correctament-
+
+3. Imputació de valors perduts:
+   Com s'ha descrit a la [secció 3.3](#33-valors-perduts), utilitzem la imputació KNN amb k=5 per gestionar els valors perduts en les variables mèdiques. Com que encara no hem escalat les dades, fem un escalat temporal per a la imputació amb `StandardScaler`. Després de la imputació, desfem l'escalat temporal amb `inverse_transform`.
+
+4. Transformem les variables asimètriques:
+   Apliquem una transformació logarítmica a les variables `Duration_untreated_psychosis` i `Age` per reduir la seva asimetria i millorar la normalitat de la distribució. Ho fem amb la classe PowerTransformer de `sklearn.preprocessing`, utilitzant el mètode 'yeo-johnson', que és robust amb valors negatius i zero.
+
+5. Escalat de les dades:
+    Finalment, escalem totes les variables numèriques utilitzant l'estandardització ``StandardScaler`` per assegurar que tinguin una mitjana de 0 i una desviació estàndard de 1. Això és especialment important per als models SVM, ja que són sensibles a l'escala de les característiques.
+
 #### 4.1.2 Ajustament del model
+
+Per tal de trobar els millors hiperparàmetres per al model SVM, he utilitzat una cerca en quadrícula (`GridSearchCV`) amb validació creuada de 5 plecs. Els hiperparàmetres que he considerat són:
+
+- `C`: El paràmetre de regularització, que controla la compensació entre maximitzar el marge i minimitzar l'error de classificació. Com que no he eliminat outliers, he provat valors baixos de C per evitar sobreajustaments a aquests valors extrems i obtenir una milor generalització. No té cap sentit provar valors alts de C en aquest cas.
+- `kernel`: El tipus de nucli a utilitzar. He provat els nuclis RBF i polinòmic per veure quin s'adapta millor a les dades. No he provat el nucli lineal, ja que les dades no semblen linealment separables.
+- `gamma`: El paràmetre del nucli RBF, que controla l'abast de la influència d'un sol exemple d'entrenament. He provat valors baixos per evitar sobreajustaments.
+- `degree`: El grau del nucli polinòmic. He provat graus baixos per evitar models massa complexos.
+- `class_weight`: El pes de les classes per gestionar el desbalanceig de la variable objectiu. He provat d'utilitzar diferents pesos perquè la classe minoritària tingui més influència en l'ajustament del model, ja que només són un 31.5% del total d'observacions.
+
+Resumit en una taula, els valors provats han sigut:
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Hiperparàmetre</th>
+        <th style="text-align:left;">Valors provats</th>
+        <th style="text-align:left;">Significat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left;"><b><code>C</code></b></td>
+        <td style="text-align:left;">[0.001, 0.01, 0.1, 1]</td>
+        <td style="text-align:left;">Paràmetre de regularització: controla el compromís entre marge gran i errors de classificació al train.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>gamma</code></b></td>
+        <td style="text-align:left;">['scale', 'auto', 0.01]</td>
+        <td style="text-align:left;">Coeficient del nucli (RBF/poly): determina l'abast d'influència de cada mostra sobre la frontera de decisió.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>kernel</code></b></td>
+        <td style="text-align:left;">['rbf', 'linear', 'poly']</td>
+        <td style="text-align:left;">Tipus de nucli utilitzat: lineal, radial (RBF) o polinòmic.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>class_weight</code></b></td>
+        <td style="text-align:left;">['balanced', {0: 1, 1: 2}, <code>class_weights</code>]</td>
+        <td style="text-align:left;">Ponderació de cada classe per tractar el desbalanceig; 'balanced' ajusta pesos segons la freqüència.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>degree</code></b></td>
+        <td style="text-align:left;">[2, 3, 4]</td>
+        <td style="text-align:left;">Grau del polínom quan <code>kernel='poly'</code>; controla la complexitat de la frontera polinòmica.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption"> Taula 4: Espai de cerca d'hiperparàmetres per al model SVM. </div>
+</div>
+
+Per tant, executem la graella de cerca amb aquests paràmetres i seleccionem el model amb la millor puntuació de validació creuada:
+
+```python
+grid_search = GridSearchCV(
+    estimator=svm_base,
+    param_grid=param_grid,
+    cv=5,
+    scoring='f1_macro',
+    verbose=2,
+    n_jobs=-1
+)
+```
+
+Amb aquest codi indiquem que es faci una cerca en quadrícula amb validació creuada de 5 plecs, utilitzant la mètrica F1 macro per avaluar el rendiment dels models. El paràmetre `verbose=2` permet veure el progrés de la cerca, i `n_jobs=-1` utilitza tots els nuclis disponibles del processador per accelerar el càlcul. El resultat de la cerca ens proporciona els millors hiperparàmetres per al model SVM:
+
+```bash
+{'C': 0.1, 'class_weight': 'balanced', 'degree': 3, 'gamma': 'auto', 'kernel': 'poly'}
+```
+
+És a dir, el millor model SVM utilitza un paràmetre de regularització `C` de 0.1, el nucli polinòmic de grau 3, amb `gamma` automàtic i pesos de classe equilibrats per gestionar el desbalanceig.
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Classe</th>
+        <th>Precision</th>
+        <th>Recall</th>
+        <th>F1-score</th>
+        <th>Support</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left;"><b><code>0</code></b> (no TRS)</td>
+        <td>0.75</td>
+        <td>0.64</td>
+        <td>0.69</td>
+        <td>1232</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>1</code></b> (TRS)</td>
+        <td>0.40</td>
+        <td>0.53</td>
+        <td>0.46</td>
+        <td>568</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>accuracy</code></b></td>
+        <td colspan="3">0.60</td>
+        <td>1800</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>macro avg</code></b></td>
+        <td>0.57</td>
+        <td>0.58</td>
+        <td>0.57</td>
+        <td>1800</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>weighted avg</code></b></td>
+        <td>0.64</td>
+        <td>0.60</td>
+        <td>0.62</td>
+        <td>1800</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption"> Taula 5: Resultats del millor model al test set</div>
+</div>
+
+Pel que fa a les prediccions de la classe negativa: El valor de **Precision** ens indica que el 75% de les prediccions de no TRS són correctes. El **Recall** ens diu que el model identifica correctament el 64% dels pacients que no desenvolupen TRS.
+
+Per a la classe positiva (TRS): El **Precision** del 40% indica que només el 40% de les prediccions de TRS són correctes. El **Recall** del 53% mostra que el model identifica correctament el 53% dels pacients que desenvolupen TRS.
 
 #### 4.1.3 Resultat final
 
