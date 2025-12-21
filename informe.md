@@ -284,6 +284,21 @@ code {
   color: #333;
 }
 
+/* Estil per a les citacions in-document (elevades i petites) */
+a[href^="#bib"] {
+    vertical-align: super;
+    font-size: 7pt;        /* Més petita que el text de 9pt */
+    text-decoration: none;
+    font-weight: bold;
+    margin-left: 1px;
+}
+
+/* Opcional: canviar el color perquè sembli una citació clàssica */
+a[href^="#bib"]:hover {
+    text-decoration: underline;
+    color: #0056b3;
+}
+
 /* Millores per a impressió/PDF */
 @media print {
   .table-container {
@@ -354,11 +369,9 @@ code {
   - [4.1 SVM](#41-svm)
     - [4.1.1 Preprocessament](#411-preprocessament)
     - [4.1.2 Ajustament del model](#412-ajustament-del-model)
-    - [4.1.3 Resultat final](#413-resultat-final)
   - [4.2 XGBoost](#42-xgboost)
     - [4.2.1 Preprocessament](#421-preprocessament)
     - [4.2.2 Ajustament del model](#422-ajustament-del-model)
-    - [4.2.3 Resultat final](#423-resultat-final)
   - [4.3 Regressió logística personalitzada](#43-regressió-logística-personalitzada)
     - [4.3.1 Preprocessament](#431-preprocessament)
     - [4.3.2 Ajustament del model](#432-ajustament-del-model)
@@ -366,6 +379,7 @@ code {
 - [5. Model final](#5-model-final)
 - [6. Model Card](#6-model-card)
 - [7. Conclusions](#7-conclusions)
+- [8. Referències](#8-referències)
 
 <div class="page-break"></div>
 
@@ -840,7 +854,7 @@ Experimentalment he provat d'imputar els valors perduts amb diferents tècniques
 
 ### 3.4 *Outliers*
 
-He fet servir el mètode del IQR per detectar valors extrems en les variables numèriques. Aquest mètode defineix els *outliers* com aquells valors que es troben fora de l'interval $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$, on $Q1$ i $Q3$ són el primer i tercer quartil, respectivament, i $IQR$ és el rang interquartílic (Q3 - Q1). La taula resultant mostra el nombre d'*outliers* detectats per variable:
+He fet servir el mètode del IQR per detectar valors extrems en les variables numèriques. Aquest mètode defineix els *outliers* com aquells valors que es troben fora de l'interval $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$, on $Q1$ i $Q3$ són el primer i tercer quartil, respectivament, i $IQR$ és el rang interquartílic ($Q3 - Q1$). La taula resultant mostra el nombre d'*outliers* detectats per variable:
 
 <div class="table-container">
   <table>
@@ -1000,7 +1014,7 @@ Per tal de trobar els millors hiperparàmetres per al model SVM, he utilitzat un
 
 - `C`: El paràmetre de regularització, que controla la compensació entre maximitzar el marge i minimitzar l'error de classificació. Com que no he eliminat outliers, he provat valors baixos de C per evitar sobreajustaments a aquests valors extrems i obtenir una milor generalització. No té cap sentit provar valors alts de C en aquest cas.
 - `kernel`: El tipus de nucli a utilitzar. He provat els nuclis RBF i polinòmic per veure quin s'adapta millor a les dades. No he provat el nucli lineal, ja que les dades no semblen linealment separables.
-- `gamma`: El paràmetre del nucli RBF, que controla l'abast de la influència d'un sol exemple d'entrenament. He provat valors baixos per evitar sobreajustaments.
+- `gamma`: El paràmetre del nucli RBF, que controla l'abast de la influència d'un sol exemple d'entrenament. He provat valors baixos per evitar sobreajustaments i també valors predefinits com 'scale' i 'auto'.
 - `degree`: El grau del nucli polinòmic. He provat graus baixos per evitar models massa complexos.
 - `class_weight`: El pes de les classes per gestionar el desbalanceig de la variable objectiu. He provat d'utilitzar diferents pesos perquè la classe minoritària tingui més influència en l'ajustament del model, ja que només són un 31.5% del total d'observacions.
 
@@ -1065,71 +1079,398 @@ Amb aquest codi indiquem que es faci una cerca en quadrícula amb validació cre
 {'C': 0.1, 'class_weight': 'balanced', 'degree': 3, 'gamma': 'auto', 'kernel': 'poly'}
 ```
 
-És a dir, el millor model SVM utilitza un paràmetre de regularització `C` de 0.1, el nucli polinòmic de grau 3, amb `gamma` automàtic i pesos de classe equilibrats per gestionar el desbalanceig.
+Aquest model utilitza un **kernel polinòmic de grau 3** per capturar relacions no lineals complexes entre les dades. La configuració `C=0.1` aplica una **regularització forta**, prioritzant una frontera de decisió simple amb un marge ample per evitar l'overfitting. En concret, la frontera de decisió es defineix mitjançant el kernel polinòmic. La funció de kernel específica per a aquesta configuració és:
+
+$$
+K(x, y) = (\gamma \cdot \langle x, y \rangle + r)^d
+$$
+
+On:
+
+- **$\gamma$**: Es calcula com $\frac{1}{n_{features}}$ quan s'utilitza `gamma='auto'`, on $n_{features}$ és el nombre de característiques del conjunt de dades. Aquest paràmetre controla l'abast de la influència de cada punt de dades, és a dir, com de lluny pot arribar la influència d'un punt d'entrenament en la frontera de decisió.
+- **$d$**: Correspon al grau del polinomi
+- **$r$**: És el terme independent `coef0`, que per defecte és $0.0$.
+
+Finalment, el paràmetre `class_weight='balanced'` compensa automàticament el desequilibri entre classes, mentre que `gamma='auto'` escala la influència de cada punt segons l'invers del nombre de característiques del conjunt de dades.[[SKL25]](#bib1)
+
+Les mètriques d'avaluació del model SVM ajustat al conjunt de prova són les següents:
+
+<div class="media-row" style="align-items: center; margin: 1rem 0;">
+  <!-- Columna Esquerra: Taula -->
+  <div style="flex: 0 0 40%; max-width: 320px;">
+    <div class="table-container" style="margin: 0; padding: 0;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
+        <thead>
+          <tr style="background-color: #e0e0e0;">
+            <th style="padding: 2px 3px; border: 1px solid #888; text-align: left; min-width: 50px;">Classe</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Prec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Rec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">F1</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Supp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.75</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.64</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.69</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1232</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.40</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.53</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.46</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">568</td>
+          </tr>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="padding: 2px 3px; border: 1px solid #aaa; text-align: center;">0.60</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1800</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>macro</code></b></td>
+            <td>0.57</td><td>0.58</td><td>0.57</td><td>1800</td>
+          </tr>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td>0.64</td><td>0.60</td><td>0.62</td><td>1800</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption"; margin-top: 2px; text-align: center;">Taula 5: Resultats del model</div>
+    </div>
+  </div>
+
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
+    <p style="margin: 0 0 0.5rem 0;">Per a la classe negativa (no TRS), la <b>Precision</b> del 75% i el <b>Recall</b> del 64% indiquen una bona capacitat d'identificació base. En canvi, per a la classe positiva (TRS), la Precision cau al 40%, reflectint dificultats pel desequilibri de dades.</p>
+    <p style="margin: 0;">Amb una <b>accuracy</b> del 60% i un <b>weighted F1-score</b> del 62%, el model mostra un rendiment moderat, sent més eficaç en la predicció de la classe majoritària que en la detecció de pacients amb TRS.</p>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+Observem la matriu de confusió i la corba ROC:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/11.png" alt="Matriu de confusió del model SVM">
+    <div class="caption">Figura 11: Matriu de confusió del model SVM</div>
+  </div>
+  <div class="image-column">
+    <img src="images/12.png" alt="Corba ROC del model SVM">
+    <div class="caption">Figura 12: Corba ROC del model SVM</div>
+  </div>
+</div>
+
+Per mirar si el model pateix d'algun sobreajustament, comparem l'accuracy al conjunt d'entrenament i al conjunt de prova. Trobem els valors executant la comanda `train_acc = best_svm.score(X_train_svm_final, y_train_svm)` i `test_acc = best_svm.score(X_test_svm_final, y_test_svm)`, obtenint els següents resultats que l'accuracy al train és de 0.6786 i l'accuracy al test és de 0.6039. Tenim una diferència de gairebé el 7.5% entre ambdós conjunts.
+
+<div class="media-row" style="align-items: center; margin: 1rem 0;">
+  <!-- Columna Esquerra: Text -->
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
+    Això indica que hi ha una diferència notable entre l'accuracy al conjunt d'entrenament i al conjunt de prova, suggerint un cert grau de sobreajustament. El model sembla adaptar-se massa bé als exemples d'entrenament, però no generalitza tan bé als nous exemples del conjunt de prova. Per mitigar aquest sobreajustament, intentem provar valors més baixos de <code>C</code> en la cerca en quadrícula, mantenint la resta de hiperparàmetres iguals. Provarem valors entre 0.01 i 0.1 perquè és el rang que la cerca en grid ha hagut de decidir. El gràfic resultant ha estat la figura 13
+  </div>
+  <div class="media-image" style="flex: 0 0 45%; max-width: 300px;">
+    <img src="images/13.png" alt="Gràfic d'accuracy en funció de C">
+    <div class="caption">Figura 13: Gràfic d'accuracy en funció de <code>C</code></div>
+  </div>
+</div>
+
+Ens retorna que el millor valor de C és ``0.036``, per tant ajustem el model final amb aquest valor i obtenim les següents mètriques:
+
+<div class="media-row" style="align-items: center; margin: 1rem 0;">
+  <!-- Columna Esquerra: Taula -->
+  <div style="flex: 0 0 42%; max-width: 300px;">
+    <div class="table-container" style="margin: 0; padding: 0;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1.1; font-size: 6.5pt;">
+        <thead>
+          <tr style="background-color: #e0e0e0;">
+            <th style="padding: 1px 2px; border: 1px solid #888; text-align: left;">Classe</th>
+            <th style="padding: 1px 2px; border: 1px solid #888;">Prec.</th>
+            <th style="padding: 1px 2px; border: 1px solid #888;">Rec.</th>
+            <th style="padding: 1px 2px; border: 1px solid #888;">F1</th>
+            <th style="padding: 1px 2px; border: 1px solid #888;">Supp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+            <td>0.73</td><td>0.82</td><td>0.77</td><td>1232</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+            <td>0.46</td><td>0.35</td><td>0.40</td><td>568</td>
+          </tr>
+          <tr>
+            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="text-align: center;">0.67</td><td>1800</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+            <td>0.60</td><td>0.58</td><td>0.58</td><td>1800</td>
+          </tr>
+          <tr>
+            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td>0.65</td><td>0.67</td><td>0.65</td><td>1800</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption" style="font-size: 7pt; margin-top: 2px; text-align: center;">Taula 6: Mètriques</div>
+    </div>
+  </div>
+
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
+    Les mètriques mostren una millora en l'accuracy global del model, que ha augmentat al 67%. La classe negativa (no TRS) manté un bon rendiment amb un F1-score del 77%, mentre que la classe positiva (TRS) mostra una lleugera millora amb un F1-score del 40%. La macro avg F1-score també ha augmentat al 58%, indicant una millor equilibració entre les classes. No obstant això, el model encara té dificultats per predir correctament la classe minoritària (TRS), com es reflecteix en el baix Recall del 35%. Això suggereix que, tot i la millora, el model encara té marge de millora en la identificació de pacients que desenvolupen TRS.
+  </div>
+</div>
+
+Observem la matriu de confusió i la corba ROC actualitzades:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="./images/15.png" alt="Gràfica 14">
+    <div class="caption">Figura 14: Corba ROC</div>
+  </div>
+  <div class="image-column">
+    <img src="./images/14.png" alt="Gràfica 15">
+    <div class="caption">Figura 15: Matriu de confusió</div>
+  </div>
+</div>
+
+Comparant el model inicial amb el nou model ajustat ``C=0.036``, s'observa una millora en la robustesa del classificador malgrat que el rendiment general segueix sent moderat. L'**AUC:** ha passat de 0.61 a **0.62**. Tot i ser un increment lleuger, indica una millor capacitat del model per separar les classes i una corba ROC més allunyada de la línia aleatòria en comparació amb el primer model.
+
+El model ajustat també ha reduït dràsticament els errors de la classe 0 (falsos positius), passant de 446 a **227**. Això demostra que la reducció del paràmetre ``C`` ha permès crear una frontera de decisió més simple i menys propensa al soroll de les dades. Tot i així, aquesta simplificació ha penalitzat el *recall* de la classe minoritària, identificant menys casos positius (196 vs 301). És a dir, el model és ara més conservador en la predicció de la classe 1 (TRS), prioritzant la qualitat de les prediccions positives per sobre de la quantitat.
+
+En conclusió, el model ajustat és més conservador i té un millor rendiment en la classe majoritària, aconseguint una frontera de decisió més generalitzable i menys "sobreajustada" al soroll inicial. No obstant això, encara hi ha marge de millora en la detecció de la classe minoritària, que és crucial en aquest context mèdic.
+
+### 4.2 XGBoost
+
+XGBoost és un model d'ensamblatge basat en arbres de decisió que utilitza l'algorisme de gradient boosting per millorar la precisió de les prediccions. Aquest model serà ajustat amb la biblioteca `xgboost`, provant diferents hiperparàmetres mitjançant una cerca en quadrícula (`GridSearchCV`).
+
+#### 4.2.1 Preprocessament
+
+El XGBoost és menys sensible a l'escala de les dades i als valors extrems, per la qual cosa el preprocessament serà més senzill que en el cas de l'SVM. Els passos seguits són:
+
+1. Particionem les dades:
+   Tal i com s'ha descrit a la [secció 3.6](#36-partició-del-conjunt-de-dades), dividim el conjunt de dades en un 80% per a l'entrenament i un 20% per a la prova, assegurant-nos que ambdues particions mantinguin la mateixa proporció de la variable objectiu `TRS`:
+
+   ```python
+   X_train_xgb, X_test_xgb, y_train_xgb, y_test_xgb = train_test_split(
+       X, y, test_size=0.2, random_state=42, stratify=y
+   )
+   ```
+
+2. Codificació de variables categòriques:
+    Utilitzem l'encodificació One-Hot per a les variables categòriques, que són `Ethnicity` i `CYP2D6_metabolic_phenotype`. Això crea variables binàries per a cada categoria, permetent que el model XGBoost les utilitzi correctament.
+
+3. Imputació de valors perduts:
+   Com s'ha descrit a la [secció 3.3](#33-valors-perduts), utilitzem la imputació KNN amb k=5 per gestionar els valors perduts en les variables mèdiques. Serà necessari escalar temporalment les dades amb `StandardScaler` per a la imputació, i després desfem l'escalat amb `inverse_transform`.
+
+#### 4.2.2 Ajustament del model
+
+Primer de tot definim un model base d'XGBoost amb els paràmetres per defecte:
+
+```python
+xgb_base = xgb.XGBClassifier(
+    objective='binary:logistic',
+    random_state=42,
+    n_jobs=-1,
+)
+```
+
+Per tal de trobar els millors hiperparàmetres per al model XGBoost, he utilitzat una cerca en quadrícula (`GridSearchCV`) amb validació creuada de 5 plecs [[XGB25]](#bib2). Els hiperparàmetres que he considerat són:
+
+- `n_estimators`: El nombre d'arbres a construir. He provat valors entre 50 i 300 per trobar un equilibri entre rendiment i temps de càlcul.
+- `max_depth`: La profunditat màxima dels arbres. He provat valors entre 3 i 7 per controlar la complexitat del model.
+- `learning_rate`: La taxa d'aprenentatge, que controla la contribució de cada arbre al model final. He provat valors baixos per evitar sobreajustaments, de 0.01 a 0.2.
+- `subsample`: La fracció de mostres utilitzades per a entrenar cada arbre. He provat valors entre 0.6 i 1.0 per introduir diversitat en els arbres.
+- `colsample_bytree`: La fracció de característiques utilitzades per a entrenar cada arbre. He provat valors entre 0.6 i 1.0 per introduir diversitat en les característiques.
+- `scale_pos_weight`: El pes de la classe positiva per gestionar el desbalanceig de la variable objectiu. He provat diferents pesos perquè la classe minoritària tingui més influència en l'ajustament del model. Els valors provats han sigut 1, la proporció entre les classes i aquesta per 2
+- `gamma`: El paràmetre de regularització que controla la complexitat dels arbres. He provat els valors de 0, 1 i 5 per veure quin s'adapta millor a les dades.
+
+Resumit en una taula, els valors provats han sigut:
+
+Aquí tens la taula d'hiperparàmetres per al model XGBoost, seguint exactament l'estil i l'estructura que has utilitzat anteriorment per al model SVM:
 
 <div class="table-container">
   <table>
     <thead>
       <tr>
-        <th style="text-align:left;">Classe</th>
-        <th>Precision</th>
-        <th>Recall</th>
-        <th>F1-score</th>
-        <th>Support</th>
+        <th style="text-align:left;">Hiperparàmetre</th>
+        <th style="text-align:left;">Valors provats</th>
+        <th style="text-align:left;">Significat</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td style="text-align:left;"><b><code>0</code></b> (no TRS)</td>
-        <td>0.75</td>
-        <td>0.64</td>
-        <td>0.69</td>
-        <td>1232</td>
+        <td style="text-align:left;"><b><code>max_depth</code></b></td>
+        <td style="text-align:left;">[3,5,7]</td>
+        <td style="text-align:left;">Profunditat màxima de l'arbre: controla la complexitat del model i el risc de sobreajustament.</td>
       </tr>
       <tr>
-        <td style="text-align:left;"><b><code>1</code></b> (TRS)</td>
-        <td>0.40</td>
-        <td>0.53</td>
-        <td>0.46</td>
-        <td>568</td>
+        <td style="text-align:left;"><b><code>learning_rate</code></b></td>
+        <td style="text-align:left;">[0.01, 0.1, 0.2]</td>
+        <td style="text-align:left;">Taxa d'aprenentatge: escala la contribució de cada nou arbre per suavitzar el procés d'optimització.</td>
       </tr>
       <tr>
-        <td style="text-align:left;"><b><code>accuracy</code></b></td>
-        <td colspan="3">0.60</td>
-        <td>1800</td>
+        <td style="text-align:left;"><b><code>n_estimators</code></b></td>
+        <td style="text-align:left;">[50,100,200,300]</td>
+        <td style="text-align:left;">Nombre d'arbres: quantitat total d'iteracions de boosting a realitzar.</td
       </tr>
       <tr>
-        <td style="text-align:left;"><b><code>macro avg</code></b></td>
-        <td>0.57</td>
-        <td>0.58</td>
-        <td>0.57</td>
-        <td>1800</td>
+        <td style="text-align:left;"><b><code>scale_pos_weight</code></b></td>
+        <td style="text-align:left;">[1, ratio, ratio*1.5, ratio*2]</td>
+        <td style="text-align:left;">Control del desbalanceig: pondera la classe positiva per millorar la sensibilitat en classes minoritàries.</td>
       </tr>
       <tr>
-        <td style="text-align:left;"><b><code>weighted avg</code></b></td>
-        <td>0.64</td>
-        <td>0.60</td>
-        <td>0.62</td>
-        <td>1800</td>
+        <td style="text-align:left;"><b><code>subsample</code></b></td>
+        <td style="text-align:left;">[0.6, 0.8, 1.0]</td>
+        <td style="text-align:left;">Mostreig de files: proporció de dades d'entrenament utilitzades per a cada arbre per afegir robustesa.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>colsample_bytree</code></b></td>
+        <td style="text-align:left;">[0.6, 0.8, 1.0]</td>
+        <td style="text-align:left;">Mostreig de columnes: proporció de característiques seleccionades a l'atzar per a cada arbre.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>gamma</code></b></td>
+        <td style="text-align:left;">[0,1,5]</td>
+        <td style="text-align:left;">Regularització conservadora: pèrdua mínima requerida per realitzar una partició addicional en un node.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>eval_metric</code></b></td>
+        <td style="text-align:left;">['logloss', 'auc']</td>
+        <td style="text-align:left;">Mètrica d'avaluació: criteri utilitzat per monitorar el rendiment durant la validació.</td>
       </tr>
     </tbody>
   </table>
-  <div class="table-caption"> Taula 5: Resultats del millor model al test set</div>
+  <div class="table-caption"> Taula 7: Espai de cerca d'hiperparàmetres per al model XGBoost.</div>
 </div>
 
-Pel que fa a les prediccions de la classe negativa: El valor de **Precision** ens indica que el 75% de les prediccions de no TRS són correctes. El **Recall** ens diu que el model identifica correctament el 64% dels pacients que no desenvolupen TRS.
+El resultat de la cerca ens proporciona els millors hiperparàmetres per al model XGBoost:
 
-Per a la classe positiva (TRS): El **Precision** del 40% indica que només el 40% de les prediccions de TRS són correctes. El **Recall** del 53% mostra que el model identifica correctament el 53% dels pacients que desenvolupen TRS.
+```bash
+ {'colsample_bytree': 1.0, 'eval_metric': 'logloss', 'gamma': 5, 'learning_rate': 0.01, 'max_depth': 7, 'n_estimators': 300, 'scale_pos_weight': np.float64(2.171806167400881), 'subsample': 0.6}
+```
 
-#### 4.1.3 Resultat final
+Aquest model utilitza una profunditat màxima de 7 per als arbres, amb una taxa d'aprenentatge baixa de 0.01 per evitar sobreajustaments. El nombre d'arbres és de 300, i s'utilitza un mostreig de files del 60% i un mostreig de columnes del 100% per introduir diversitat en els arbres. El paràmetre `scale_pos_weight` s'ha ajustat a la proporció entre les classes, sense multiplicar, per donar més pes a la classe minoritària. Finalment, el paràmetre `gamma` s'ha establert en 5 per aplicar una regularització més forta i evitar particions innecessàries en els arbres.
+Aquest model, de base, em fa sospitar que hi ha molt de sobreajustament, ja que té molts arbres i una profunditat alta, però la taxa d'aprenentatge baixa podria ajudar a mitigar-ho, per tant caldrà analitzar-ho més endavant.
 
-### 4.2 XGBoost
+Observem les mètriques d'avaluació del model XGBoost ajustat al conjunt de prova:
 
-#### 4.2.1 Preprocessament
+<div class="media-row" style="align-items: center; margin: 1rem 0;">
+  <div style="flex: 0 0 40%; max-width: 320px;">
+    <div class="table-container" style="margin: 0; padding: 0;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
+        <thead>
+          <tr style="background-color: #e0e0e0;">
+            <th style="padding: 2px 3px; border: 1px solid #888; text-align: left; min-width: 50px;">Classe</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Prec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Rec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">F1</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Supp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.74</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.63</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.68</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1232</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.40</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.52</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.45</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">568</td>
+          </tr>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="padding: 2px 3px; border: 1px solid #aaa; text-align: center;">0.60</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1800</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>macro</code></b></td>
+            <td>0.57</td><td>0.58</td><td>0.57</td><td>1800</td>
+          </tr>
+          <tr>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td>0.63</td><td>0.60</td><td>0.61</td><td>1800</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="table-caption"; margin-top: 2px; text-align: center;">Taula 5: Resultats del model</div>
+    </div>
+  </div>
 
-#### 4.2.2 Ajustament del model
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
+    <p style="margin: 0 0 0.5rem 0;">Podem veure que el model XGBoost té un rendiment similar al model SVM, amb una <b>accuracy</b> del 60%, és a dir, el 60% de les prediccions són correctes. Veiem que assigna correctament el 63% de la classe 0 (no TRS) i el 52% de la classe 1 (TRS).</p>
+    <p style="margin: 0;">També veiem que de les que assigna a la classe 1, només el 40% són correctes. Això indica que el model té dificultats per identificar correctament els pacients amb TRS, ja que hi ha molts falsos positius. Pel que fa a les que assigna a la classe 0, el 74% són correctes, però hi ha un 37% de falsos negatius, és a dir, pacients amb TRS que són classificats com a no TRS. Més enllà, l'<b>F1-score ponderat</b> és del 61%, indicant un rendiment moderat en general.</p>
+  </div>
+</div>
 
-#### 4.2.3 Resultat final
+Comprovem la matriu de confusió i la corba ROC:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/16.png" alt="Matriu de confusió del model XGBoost">
+    <div class="caption">Figura 16: Matriu de confusió del model XGBoost</div>
+  </div>
+  <div class="image-column">
+    <img src="images/17.png" alt="Corba ROC del model XGBoost">
+    <div class="caption">Figura 17: Corba ROC del model XGBoost</div>
+  </div>
+</div>
+
+Veiem que els resultats són molt similars als del model SVM, amb una AUC de 0.62, indicant una capacitat moderada per separar les classes. La matriu de confusió mostra que hi ha un nombre significatiu de falsos positius i falsos negatius, suggerint que el model té dificultats per identificar correctament els pacients amb TRS. Aquest comportament és similar al del model SVM, indicant que ambdós models tenen limitacions en la seva capacitat per predir aquesta condició mèdica específica. Comprovem també si hi ha sobreajustament comparant l'accuracy al conjunt d'entrenament i al conjunt de prova. Obtenim que el train té un accuracy de 0.8149 i el test de 0.5972, per tant hi ha una diferència molt gran entre ambdós conjunts, indicant un sobreajustament molt elevat. Per tant, caldrà ajustar els hiperparàmetres per tal de reduir aquest sobreajustament. Visualitzem també les corbes d'aprenentatge per veure com evoluciona l'error en funció del nombre d'arbres, ens pot donar un indicador de si cal augmentar o reduir el nombre d'arbres i quants:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/18.png" alt="Corbes d'aprenentatge del model XGBoost">
+    <div class="caption">Figura 18: Corbes d'aprenentatge del model XGBoost</div>
+  </div>
+</div>
+
+Veiem que a partir de la ronda 100, l'error de validació comença a creixer, indicant que el model comença a sobreajustar-se. Per tant, podem reduir el nombre d'arbres a 100 per tal de reduir el sobreajustament. Mirem de refinar ara la profunditat màxima dels arbres, provant valors de l'1 al 10, per veure quin és el millor valor per tal de reduir el sobreajustament. Mantenim la resta d'hiperparàmetres de moment. El gràfic resultant és la figura 19
+
+<div class="media-row">
+  <div class="media-image">
+    <img src="images/19.png" alt="Gràfic de profunditat màxima vs accuracy">
+    <div class="caption">Figura 19: Gràfic de profunditat màxima vs accuracy</div>
+  </div>
+
+  <div class="media-text">
+    <p>
+      Veiem que l'<b>accuracy</b> augmenta a mida que la profunditat augmenta; per tant, no sembla que reduir la profunditat ajudi a reduir el sobreajustament. Tot i així, per simplicitat, establim la profunditat a <b>7</b>, que és un valor intermedi.
+    </p>
+  </div>
+</div>
+
+Provem doncs a mirar de reduir el valor gamma, ja que aquest paràmetre controla la complexitat dels arbres i podria ajudar a reduir el sobreajustament. Provem diferents valors del 0 al 10, per veure si això ajuda a reduir el sobreajustament:
+
+<div class="media-row">
+  <div class="media-image">
+    <img src="images/20.png" alt="Gràfic de gamma vs accuracy">
+    <div class="caption">Figura 20: Gràfic de gamma vs accuracy</div>
+  </div>
+
+  <div class="media-text">
+    <p>
+      Veiem ara que l'<b>accuracy</b> disminueix a mida que <code>gamma</code> augmenta; per tant, sembla que reduir el valor de <code>gamma</code> era el culpable del sobreajustament. Establim doncs <code>gamma</code> a <b>0</b>.
+    </p>
+  </div>
+</div>
+
+Ens queda un model final amb els següents hiperparàmetres ajustats:
+
+```bash
+{'colsample_bytree': 1.0, 'eval_metric': 'logloss', 'gamma': 0, 'learning_rate': 0.01, 'max_depth': 7, 'n_estimators': 100, 'scale_pos_weight': np.float64(2.171806167400881), 'subsample': 0.8}
+```
+
+També augmentem el `subsample` a 0.8 per tal de reduir el sobreajustament, ja que amb un valor més alt, cada arbre veu més dades i per tant és menys propens a sobreajustar-se.
 
 ### 4.3 Regressió logística personalitzada
 
@@ -1144,3 +1485,9 @@ Per a la classe positiva (TRS): El **Precision** del 40% indica que només el 40
 ## 6. Model Card
 
 ## 7. Conclusions
+
+## 8. Referències
+
+<a name="bib1"></a> [SKL25]: Scikit-learn developers. (n.d.). SVC — scikit-learn 1.7.2 documentation. Recuperat el 21 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
+
+<a name="bib2"></a> [XGB25]: XGBoost developers. (s.f.). XGBoost Parameters. Recuperat el 21 de desembre de 2025, de [https://xgboost.readthedocs.io/en/stable/parameter.html](https://xgboost.readthedocs.io/en/stable/parameter.html)
