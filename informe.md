@@ -373,9 +373,9 @@ a[href^="#bib"]:hover {
     - [4.2.1 Preprocessament](#421-preprocessament)
     - [4.2.2 Ajustament del model](#422-ajustament-del-model)
   - [4.3 Regressió logística personalitzada](#43-regressió-logística-personalitzada)
-    - [4.3.1 Preprocessament](#431-preprocessament)
-    - [4.3.2 Ajustament del model](#432-ajustament-del-model)
-    - [4.3.3 Resultat final](#433-resultat-final)
+    - [4.3.1 Preprocessament de les dades](#431-preprocessament-de-les-dades)
+    - [4.3.2 Implementació del model](#432-implementació-del-model)
+    - [4.3.3 Ajustament del model](#433-ajustament-del-model)
 - [5. Model final](#5-model-final)
 - [6. Model Card](#6-model-card)
 - [7. Conclusions](#7-conclusions)
@@ -1169,59 +1169,67 @@ Per mirar si el model pateix d'algun sobreajustament, comparem l'accuracy al con
 <div class="media-row" style="align-items: center; margin: 1rem 0;">
   <!-- Columna Esquerra: Text -->
   <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
-    Això indica que hi ha una diferència notable entre l'accuracy al conjunt d'entrenament i al conjunt de prova, suggerint un cert grau de sobreajustament. El model sembla adaptar-se massa bé als exemples d'entrenament, però no generalitza tan bé als nous exemples del conjunt de prova. Per mitigar aquest sobreajustament, intentem provar valors més baixos de <code>C</code> en la cerca en quadrícula, mantenint la resta de hiperparàmetres iguals. Provarem valors entre 0.01 i 0.1 perquè és el rang que la cerca en grid ha hagut de decidir. El gràfic resultant ha estat la figura 13
+    Això indica que hi ha una diferència notable entre l'accuracy al conjunt d'entrenament i al conjunt de prova, suggerint un cert grau de sobreajustament. El model sembla adaptar-se massa bé als exemples d'entrenament, però no generalitza tan bé als nous exemples del conjunt de prova. Per mitigar aquest sobreajustament, intentem provar valors més baixos de <code>C</code> en la cerca en quadrícula, mantenint la resta de hiperparàmetres iguals. En aquest cas en concret, intentarem buscar la C que millori el recall, que en un context mèdic és més important per minimitzar els falsos negatius (pacients amb TRS no detectats). Per tant, provarem 15 valors de C entre 0.01 i 0.1 per trobar el millor compromís entre recall i precisió.
   </div>
   <div class="media-image" style="flex: 0 0 45%; max-width: 300px;">
-    <img src="images/13.png" alt="Gràfic d'accuracy en funció de C">
-    <div class="caption">Figura 13: Gràfic d'accuracy en funció de <code>C</code></div>
+    <img src="images/13.png" alt="Gràfic del recall en funció de C">
+    <div class="caption">Figura 13: Gràfic del recall en funció de <code>C</code></div>
   </div>
 </div>
 
-Ens retorna que el millor valor de C és ``0.036``, per tant ajustem el model final amb aquest valor i obtenim les següents mètriques:
+Ens retorna que el millor valor de C és ``0.01``, que dona un recall de 1.0. Això és impossible, ja que vol dir que tots els pacients amb TRS han estat classificats correctament, per tant hi ha algun error en el càlcul. El segon millor valor és el de ``0.1``, que ja l'havíem provat abans i ens donava un recall de 0.53. Per tant, provem amb un valor intermedi entre ``0.01`` i ``0.1``, concretament ``0.06``, per veure si podem millorar el recall sense sacrificar massa la precisió.
 
 <div class="media-row" style="align-items: center; margin: 1rem 0;">
   <!-- Columna Esquerra: Taula -->
-  <div style="flex: 0 0 42%; max-width: 300px;">
+  <div style="flex: 0 0 40%; max-width: 320px;">
     <div class="table-container" style="margin: 0; padding: 0;">
-      <table style="border-collapse: collapse; width: 100%; line-height: 1.1; font-size: 6.5pt;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
         <thead>
           <tr style="background-color: #e0e0e0;">
-            <th style="padding: 1px 2px; border: 1px solid #888; text-align: left;">Classe</th>
-            <th style="padding: 1px 2px; border: 1px solid #888;">Prec.</th>
-            <th style="padding: 1px 2px; border: 1px solid #888;">Rec.</th>
-            <th style="padding: 1px 2px; border: 1px solid #888;">F1</th>
-            <th style="padding: 1px 2px; border: 1px solid #888;">Supp.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888; text-align: left; min-width: 50px;">Classe</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Prec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Rec.</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">F1</th>
+            <th style="padding: 2px 3px; border: 1px solid #888;">Supp.</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
-            <td>0.73</td><td>0.82</td><td>0.77</td><td>1232</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.74</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.69</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.71</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1232</td>
           </tr>
           <tr style="background-color: #f5f5f5;">
-            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
-            <td>0.46</td><td>0.35</td><td>0.40</td><td>568</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.42</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.49</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.45</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">568</td>
           </tr>
           <tr>
-            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
-            <td colspan="3" style="text-align: center;">0.67</td><td>1800</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="padding: 2px 3px; border: 1px solid #aaa; text-align: center;">0.62</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa;">1800</td>
           </tr>
           <tr style="background-color: #f5f5f5;">
-            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
-            <td>0.60</td><td>0.58</td><td>0.58</td><td>1800</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+            <td>0.58</td><td>0.59</td><td>0.58</td><td>1800</td>
           </tr>
           <tr>
-            <td style="padding: 1px 2px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
-            <td>0.65</td><td>0.67</td><td>0.65</td><td>1800</td>
+            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td>0.64</td><td>0.62</td><td>0.63</td><td>1800</td>
           </tr>
         </tbody>
       </table>
-      <div class="table-caption" style="font-size: 7pt; margin-top: 2px; text-align: center;">Taula 6: Mètriques</div>
+      <div class="table-caption" style="margin-top: 2px; text-align: center;">Taula X: Resultats del model SVM amb <code>C=0.06</code></div>
     </div>
   </div>
 
   <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
-    Les mètriques mostren una millora en l'accuracy global del model, que ha augmentat al 67%. La classe negativa (no TRS) manté un bon rendiment amb un F1-score del 77%, mentre que la classe positiva (TRS) mostra una lleugera millora amb un F1-score del 40%. La macro avg F1-score també ha augmentat al 58%, indicant una millor equilibració entre les classes. No obstant això, el model encara té dificultats per predir correctament la classe minoritària (TRS), com es reflecteix en el baix Recall del 35%. Això suggereix que, tot i la millora, el model encara té marge de millora en la identificació de pacients que desenvolupen TRS.
+    <p style="margin: 0 0 0.5rem 0;">Veiem que amb aquest nou valor de <code>C=0.06</code>, el model aconsegueix un millor equilibri entre precisió i recall, amb una <b>accuracy</b> del 62% i un F1-score ponderat del 63%. Això indica que el model és capaç de detectar més casos de TRS (recall del 49%) sense sacrificar massa la precisió (42%).</p>
+    <p style="margin: 0;">Aquesta configuració sembla oferir un millor compromís per a l'objectiu mèdic de minimitzar els falsos negatius, tot mantenint una bona qualitat en les prediccions positives. També consultem els valors d'accuracy al train i al test per aquest nou model amb <code>C=0.06</code>, obtenint que l'accuracy al train és de 0.6804 i l'accuracy al test és de 0.6222. La diferència entre ambdós conjunts és ara d'aproximadament el 5.8%, indicant una millora en la generalització del model, tot i que encara hi ha marge per a una millor optimització.</p>
   </div>
 </div>
 
@@ -1238,11 +1246,11 @@ Observem la matriu de confusió i la corba ROC actualitzades:
   </div>
 </div>
 
-Comparant el model inicial amb el nou model ajustat ``C=0.036``, s'observa una millora en la robustesa del classificador malgrat que el rendiment general segueix sent moderat. L'**AUC:** ha passat de 0.61 a **0.62**. Tot i ser un increment lleuger, indica una millor capacitat del model per separar les classes i una corba ROC més allunyada de la línia aleatòria en comparació amb el primer model.
+Comparant el model inicial amb el nou model ajustat amb **``C=0.06``**, s’observa una millora en la robustesa del classificador, tot i que el rendiment global continua sent moderat. L’**AUC** es manté en **0.61**, cosa que indica una capacitat de discriminació estable, amb una corba ROC clarament per sobre de la diagonal aleatòria però encara lluny d’un classificador ideal.
 
-El model ajustat també ha reduït dràsticament els errors de la classe 0 (falsos positius), passant de 446 a **227**. Això demostra que la reducció del paràmetre ``C`` ha permès crear una frontera de decisió més simple i menys propensa al soroll de les dades. Tot i així, aquesta simplificació ha penalitzat el *recall* de la classe minoritària, identificant menys casos positius (196 vs 301). És a dir, el model és ara més conservador en la predicció de la classe 1 (TRS), prioritzant la qualitat de les prediccions positives per sobre de la quantitat.
+Pel que fa a la matriu de confusió, el model ajustat amb ``C=0.06`` obté **844 Veritables Negatius** i **388 Falsos Positius** per a la classe 0, la qual cosa reflecteix una bona capacitat per identificar pacients no TRS sense caure en un excés d’errors positius. Per a la classe 1 (TRS), el model detecta **276 Veritables Positius** i deixa **292 Falsos Negatius**, mantenint un compromís raonable entre la detecció de casos positius i el control d’alertes falses. En conjunt, la reducció de $C$ fins a 0.06 ha permès obtenir una frontera de decisió més generalitzable i menys sensible al soroll, fent el model més conservador però també més fiable, encara que segueixi existint marge de millora en la sensibilitat a la classe TRS.
 
-En conclusió, el model ajustat és més conservador i té un millor rendiment en la classe majoritària, aconseguint una frontera de decisió més generalitzable i menys "sobreajustada" al soroll inicial. No obstant això, encara hi ha marge de millora en la detecció de la classe minoritària, que és crucial en aquest context mèdic.
+En conclusió, el model SVM ajustat amb ``C=0.06`` ofereix un millor equilibri entre precisió i recall, essent més adequat per a l'objectiu mèdic de minimitzar els falsos negatius. Tot i això, el rendiment global del model continua sent moderat, indicant la necessitat d'explorar altres models o tècniques per millorar la capacitat predictiva en aquest context.
 
 ### 4.2 XGBoost
 
@@ -1279,19 +1287,9 @@ xgb_base = xgb.XGBClassifier(
 )
 ```
 
-Per tal de trobar els millors hiperparàmetres per al model XGBoost, he utilitzat una cerca en quadrícula (`GridSearchCV`) amb validació creuada de 5 plecs [[XGB25]](#bib2). Els hiperparàmetres que he considerat són:
-
-- `n_estimators`: El nombre d'arbres a construir. He provat valors entre 50 i 300 per trobar un equilibri entre rendiment i temps de càlcul.
-- `max_depth`: La profunditat màxima dels arbres. He provat valors entre 3 i 7 per controlar la complexitat del model.
-- `learning_rate`: La taxa d'aprenentatge, que controla la contribució de cada arbre al model final. He provat valors baixos per evitar sobreajustaments, de 0.01 a 0.2.
-- `subsample`: La fracció de mostres utilitzades per a entrenar cada arbre. He provat valors entre 0.6 i 1.0 per introduir diversitat en els arbres.
-- `colsample_bytree`: La fracció de característiques utilitzades per a entrenar cada arbre. He provat valors entre 0.6 i 1.0 per introduir diversitat en les característiques.
-- `scale_pos_weight`: El pes de la classe positiva per gestionar el desbalanceig de la variable objectiu. He provat diferents pesos perquè la classe minoritària tingui més influència en l'ajustament del model. Els valors provats han sigut 1, la proporció entre les classes i aquesta per 2
-- `gamma`: El paràmetre de regularització que controla la complexitat dels arbres. He provat els valors de 0, 1 i 5 per veure quin s'adapta millor a les dades.
+Per tal de trobar els millors hiperparàmetres per al model XGBoost, he utilitzat una cerca en quadrícula (`GridSearchCV`) amb validació creuada de 5 plecs [[XGB25]](#bib2). Els hiperparàmetres han estat considerats tenint en compte les característiques del conjunt de dades, és a dir, tendència al sobreajustament i desbalanceig de classes. Els hiperparàmetres que he considerat són:
 
 Resumit en una taula, els valors provats han sigut:
-
-Aquí tens la taula d'hiperparàmetres per al model XGBoost, seguint exactament l'estil i l'estructura que has utilitzat anteriorment per al model SVM:
 
 <div class="table-container">
   <table>
@@ -1305,114 +1303,131 @@ Aquí tens la taula d'hiperparàmetres per al model XGBoost, seguint exactament 
     <tbody>
       <tr>
         <td style="text-align:left;"><b><code>max_depth</code></b></td>
-        <td style="text-align:left;">[3,5,7]</td>
-        <td style="text-align:left;">Profunditat màxima de l'arbre: controla la complexitat del model i el risc de sobreajustament.</td>
+        <td style="text-align:left;">[3, 4, 5]</td>
+        <td style="text-align:left;">Profunditat màxima dels arbres: controla la complexitat del model per evitar sobreajustaments.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>learning_rate</code></b></td>
-        <td style="text-align:left;">[0.01, 0.1, 0.2]</td>
-        <td style="text-align:left;">Taxa d'aprenentatge: escala la contribució de cada nou arbre per suavitzar el procés d'optimització.</td>
+        <td style="text-align:left;">[0.01, 0.05, 0.1]</td>
+        <td style="text-align:left;">Taxa d'aprenentatge: controla la contribució de cada arbre, amb valors baixos per evitar sobreajustaments.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>n_estimators</code></b></td>
-        <td style="text-align:left;">[50,100,200,300]</td>
-        <td style="text-align:left;">Nombre d'arbres: quantitat total d'iteracions de boosting a realitzar.</td
+        <td style="text-align:left;">[100, 200, 300]</td>
+        <td style="text-align:left;">Nombre d'arbres: equilibri entre rendiment i temps de càlcul.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>scale_pos_weight</code></b></td>
-        <td style="text-align:left;">[1, ratio, ratio*1.5, ratio*2]</td>
-        <td style="text-align:left;">Control del desbalanceig: pondera la classe positiva per millorar la sensibilitat en classes minoritàries.</td>
+        <td style="text-align:left;">[ratio_xgb]</td>
+        <td style="text-align:left;">Pes de la classe positiva: gestiona el desbalanceig de la variable TRS per donar més influència a la classe minoritària.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>subsample</code></b></td>
-        <td style="text-align:left;">[0.6, 0.8, 1.0]</td>
-        <td style="text-align:left;">Mostreig de files: proporció de dades d'entrenament utilitzades per a cada arbre per afegir robustesa.</td>
+        <td style="text-align:left;">[0.8, 0.9]</td>
+        <td style="text-align:left;">Fració de mostres per arbre: introdueix diversitat i robustesa.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>colsample_bytree</code></b></td>
-        <td style="text-align:left;">[0.6, 0.8, 1.0]</td>
-        <td style="text-align:left;">Mostreig de columnes: proporció de característiques seleccionades a l'atzar per a cada arbre.</td>
+        <td style="text-align:left;">[0.8, 0.9]</td>
+        <td style="text-align:left;">Fració de característiques per arbre: introdueix diversitat en les característiques.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>min_child_weight</code></b></td>
+        <td style="text-align:left;">[3, 5, 7]</td>
+        <td style="text-align:left;">Pes mínim requerit en un node fill: controla la creació de fulles per regularitzar el model.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>reg_alpha</code></b></td>
+        <td style="text-align:left;">[0.1, 0.5, 1]</td>
+        <td style="text-align:left;">Regularització L1: penalitza les característiques no rellevants per evitar sobreajustament.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>reg_lambda</code></b></td>
+        <td style="text-align:left;">[0.1, 0.5, 1]</td>
+        <td style="text-align:left;">Regularització L2: penalitza els pesos grans per suavitzar el model.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>gamma</code></b></td>
-        <td style="text-align:left;">[0,1,5]</td>
-        <td style="text-align:left;">Regularització conservadora: pèrdua mínima requerida per realitzar una partició addicional en un node.</td>
-      </tr>
-      <tr>
-        <td style="text-align:left;"><b><code>eval_metric</code></b></td>
-        <td style="text-align:left;">['logloss', 'auc']</td>
-        <td style="text-align:left;">Mètrica d'avaluació: criteri utilitzat per monitorar el rendiment durant la validació.</td>
+        <td style="text-align:left;">[0.1, 0.2]</td>
+        <td style="text-align:left;">Pèrdua mínima per partició: regularitza la complexitat dels arbres.</td>
       </tr>
     </tbody>
   </table>
-  <div class="table-caption"> Taula 7: Espai de cerca d'hiperparàmetres per al model XGBoost.</div>
+  <div class="table-caption">Taula 7: Espai de cerca d'hiperparàmetres per al model XGBoost.</div>
 </div>
+
+No s'han considerat arbres més profunds ni taxes d'aprenentatge més altes per evitar sobreajustaments, donada la mida i complexitat del conjunt de dades. El paràmetre `scale_pos_weight` s'ha establert amb el valor del ratio entre les classes per donar més pes a la classe minoritària (TRS).
+Les regularitzacions L1 i L2 s'han inclòs per penalitzar característiques no rellevants i pesos grans, respectivament, ajudant a prevenir l'overfitting.
 
 El resultat de la cerca ens proporciona els millors hiperparàmetres per al model XGBoost:
 
 ```bash
- {'colsample_bytree': 1.0, 'eval_metric': 'logloss', 'gamma': 5, 'learning_rate': 0.01, 'max_depth': 7, 'n_estimators': 300, 'scale_pos_weight': np.float64(2.171806167400881), 'subsample': 0.6}
+{'colsample_bytree': 0.9, 'gamma': 0.1, 'learning_rate': 0.01, 'max_depth': 5, 'min_child_weight': 3, 'n_estimators': 300, 'reg_alpha': 1, 'reg_lambda': 1, 'scale_pos_weight': np.float64(2.171806167400881), 'subsample': 0.8}
 ```
 
-Aquest model utilitza una profunditat màxima de 7 per als arbres, amb una taxa d'aprenentatge baixa de 0.01 per evitar sobreajustaments. El nombre d'arbres és de 300, i s'utilitza un mostreig de files del 60% i un mostreig de columnes del 100% per introduir diversitat en els arbres. El paràmetre `scale_pos_weight` s'ha ajustat a la proporció entre les classes, sense multiplicar, per donar més pes a la classe minoritària. Finalment, el paràmetre `gamma` s'ha establert en 5 per aplicar una regularització més forta i evitar particions innecessàries en els arbres.
-Aquest model, de base, em fa sospitar que hi ha molt de sobreajustament, ja que té molts arbres i una profunditat alta, però la taxa d'aprenentatge baixa podria ajudar a mitigar-ho, per tant caldrà analitzar-ho més endavant.
+Aquest model utilitza **300 arbres** amb una **profunditat màxima de 5** per capturar relacions complexes entre les dades. La **taxa d'aprenentatge de 0.01** assegura que cada arbre contribueixi de manera gradual al model final, ajudant a prevenir l'overfitting. Els paràmetres `subsample=0.8` i `colsample_bytree=0.9` introdueixen diversitat en les mostres i característiques utilitzades per a cada arbre, millorant la robustesa del model. A més, la configuració `scale_pos_weight=2.17` compensa el desequilibri entre classes, donant més pes a la classe minoritària (TRS). Les regularitzacions L1 i L2 amb valors de 1 penalitzen característiques no rellevants i pesos grans, respectivament, ajudant a prevenir l'overfitting.[[XGB25]](#bib2)
 
-Observem les mètriques d'avaluació del model XGBoost ajustat al conjunt de prova:
+Les mètriques d'avaluació del model XGBoost ajustat al conjunt de prova són les següents:
 
-<div class="media-row" style="align-items: center; margin: 1rem 0;">
-  <div style="flex: 0 0 40%; max-width: 320px;">
-    <div class="table-container" style="margin: 0; padding: 0;">
-      <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
-        <thead>
-          <tr style="background-color: #e0e0e0;">
-            <th style="padding: 2px 3px; border: 1px solid #888; text-align: left; min-width: 50px;">Classe</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Prec.</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Rec.</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">F1</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Supp.</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.74</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.63</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.68</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">1232</td>
-          </tr>
-          <tr style="background-color: #f5f5f5;">
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.40</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.52</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.45</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">568</td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
-            <td colspan="3" style="padding: 2px 3px; border: 1px solid #aaa; text-align: center;">0.60</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">1800</td>
-          </tr>
-          <tr style="background-color: #f5f5f5;">
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>macro</code></b></td>
-            <td>0.57</td><td>0.58</td><td>0.57</td><td>1800</td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
-            <td>0.63</td><td>0.60</td><td>0.61</td><td>1800</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="table-caption"; margin-top: 2px; text-align: center;">Taula 5: Resultats del model</div>
+<div class="media-row" style="display: flex; align-items: center; margin: 1rem 0; gap: 15px;">
+    <div style="flex: 0 0 40%; max-width: 320px;">
+        <div class="table-container" style="margin: 0; padding: 0;">
+            <table style="border-collapse: collapse; width: 100%; line-height: 1.2; font-size: 7.5pt;">
+                <thead>
+                    <tr style="background-color: #e0e0e0;">
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: left;">Classe</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Prec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Rec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">F1</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Supp.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.75</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.65</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1232</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.39</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.47</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">568</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+                        <td colspan="3" style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.57</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.56</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.64</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.60</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula 8: Resultats de classificació per al model XGBoost.</div>
+        </div>
     </div>
-  </div>
-
-  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
-    <p style="margin: 0 0 0.5rem 0;">Podem veure que el model XGBoost té un rendiment similar al model SVM, amb una <b>accuracy</b> del 60%, és a dir, el 60% de les prediccions són correctes. Veiem que assigna correctament el 63% de la classe 0 (no TRS) i el 52% de la classe 1 (TRS).</p>
-    <p style="margin: 0;">També veiem que de les que assigna a la classe 1, només el 40% són correctes. Això indica que el model té dificultats per identificar correctament els pacients amb TRS, ja que hi ha molts falsos positius. Pel que fa a les que assigna a la classe 0, el 74% són correctes, però hi ha un 37% de falsos negatius, és a dir, pacients amb TRS que són classificats com a no TRS. Més enllà, l'<b>F1-score ponderat</b> és del 61%, indicant un rendiment moderat en general.</p>
-  </div>
+    <div class="media-text" style="flex: 1; font-size: 8.5pt; line-height: 1.4;">
+        <p style="margin: 0 0 0.5rem 0;">El model XGBoost presenta un rendiment moderat amb una <b>accuracy</b> del 58% i un F1-score ponderat del 60%. Tot i que la precisió per a la classe positiva (TRS) se situa en el 39%, el model assoleix un <b>recall</b> del 59%, xifra que indica una capacitat notable per identificar pacients amb resistència al tractament, malgrat l'elevat nombre de falsos positius generats.</p>
+        <p style="margin: 0;">Pel que fa a la classe no TRS (0), el model demostra una robustesa superior en precisió (75%), encertant la majoria de casos negatius, encara que el seu recall (58%) suggereix que una part d'aquests pacients es classifiquen erròniament com a positius. Aquests resultats reflecteixen un compromís similar al del model SVM, prioritzant la detecció de la classe minoritària per sobre de la precisió global, un factor clau en el context clínic de la malaltia.</p>
+    </div>
 </div>
 
-Comprovem la matriu de confusió i la corba ROC:
+Observem la matriu de confusió i la corba ROC:
 
 <div class="image-row">
   <div class="image-column">
@@ -1425,7 +1440,9 @@ Comprovem la matriu de confusió i la corba ROC:
   </div>
 </div>
 
-Veiem que els resultats són molt similars als del model SVM, amb una AUC de 0.62, indicant una capacitat moderada per separar les classes. La matriu de confusió mostra que hi ha un nombre significatiu de falsos positius i falsos negatius, suggerint que el model té dificultats per identificar correctament els pacients amb TRS. Aquest comportament és similar al del model SVM, indicant que ambdós models tenen limitacions en la seva capacitat per predir aquesta condició mèdica específica. Comprovem també si hi ha sobreajustament comparant l'accuracy al conjunt d'entrenament i al conjunt de prova. Obtenim que el train té un accuracy de 0.8149 i el test de 0.5972, per tant hi ha una diferència molt gran entre ambdós conjunts, indicant un sobreajustament molt elevat. Per tant, caldrà ajustar els hiperparàmetres per tal de reduir aquest sobreajustament. Visualitzem també les corbes d'aprenentatge per veure com evoluciona l'error en funció del nombre d'arbres, ens pot donar un indicador de si cal augmentar o reduir el nombre d'arbres i quants:
+El model prioritza la sensibilitat, identificant correctament **336 casos positius** (True Positives). Tot i així, genera un nombre elevat de falsos positius (523), el que confirma que el model tendeix a ser "agressiu" en la classificació per no perdre pacients de risc. L'**AUC de 0.62** indica que el model té una capacitat de discriminació superior a l'atzar. La corba puja de forma constant per sobre de la línia de referència, demostrant que el model és capaç de separar les classes tot i la complexitat i el desbalanceig de les dades. En resum, el model és millor detectant els casos de TRS (recall) que no pas sent precís en les seves prediccions positives, un comportament esperat en un context mèdic on es volen minimitzar els falsos negatius.
+
+Revisem si hi ha overajustament observant les corbes d'aprenentatge:
 
 <div class="image-row">
   <div class="image-column">
@@ -1434,51 +1451,68 @@ Veiem que els resultats són molt similars als del model SVM, amb una AUC de 0.6
   </div>
 </div>
 
-Veiem que a partir de la ronda 100, l'error de validació comença a creixer, indicant que el model comença a sobreajustar-se. Per tant, podem reduir el nombre d'arbres a 100 per tal de reduir el sobreajustament. Mirem de refinar ara la profunditat màxima dels arbres, provant valors de l'1 al 10, per veure quin és el millor valor per tal de reduir el sobreajustament. Mantenim la resta d'hiperparàmetres de moment. El gràfic resultant és la figura 19
-
-<div class="media-row">
-  <div class="media-image">
-    <img src="images/19.png" alt="Gràfic de profunditat màxima vs accuracy">
-    <div class="caption">Figura 19: Gràfic de profunditat màxima vs accuracy</div>
-  </div>
-
-  <div class="media-text">
-    <p>
-      Veiem que l'<b>accuracy</b> augmenta a mida que la profunditat augmenta; per tant, no sembla que reduir la profunditat ajudi a reduir el sobreajustament. Tot i així, per simplicitat, establim la profunditat a <b>7</b>, que és un valor intermedi.
-    </p>
-  </div>
-</div>
-
-Provem doncs a mirar de reduir el valor gamma, ja que aquest paràmetre controla la complexitat dels arbres i podria ajudar a reduir el sobreajustament. Provem diferents valors del 0 al 10, per veure si això ajuda a reduir el sobreajustament:
-
-<div class="media-row">
-  <div class="media-image">
-    <img src="images/20.png" alt="Gràfic de gamma vs accuracy">
-    <div class="caption">Figura 20: Gràfic de gamma vs accuracy</div>
-  </div>
-
-  <div class="media-text">
-    <p>
-      Veiem ara que l'<b>accuracy</b> disminueix a mida que <code>gamma</code> augmenta; per tant, sembla que reduir el valor de <code>gamma</code> era el culpable del sobreajustament. Establim doncs <code>gamma</code> a <b>0</b>.
-    </p>
-  </div>
-</div>
-
-Ens queda un model final amb els següents hiperparàmetres ajustats:
-
-```bash
-{'colsample_bytree': 1.0, 'eval_metric': 'logloss', 'gamma': 0, 'learning_rate': 0.01, 'max_depth': 7, 'n_estimators': 100, 'scale_pos_weight': np.float64(2.171806167400881), 'subsample': 0.8}
-```
-
-També augmentem el `subsample` a 0.8 per tal de reduir el sobreajustament, ja que amb un valor més alt, cada arbre veu més dades i per tant és menys propens a sobreajustar-se.
+Podem veure clarament com l'error de validació redueix i arriba a estabilitzar-se al final de l'entrenament, és a dir, quan arriba a entrenar-se l'arbre número 300. Això indica que el model no pateix d'overajustament, ja que l'error de validació no augmenta després d'un cert punt. Per tant, podem concloure que el model XGBoost està ben ajustat als dades d'entrenament i generalitza bé al conjunt de prova, tot i la complexitat del conjunt de dades i el desbalanceig de classes.
 
 ### 4.3 Regressió logística personalitzada
 
-#### 4.3.1 Preprocessament
+En aquesta secció, desenvolupem un model de regressió logística des de zero, implementant l'algorisme d'optimització de descens de gradient per ajustar els pesos del model. Aquest model tindrà com a objectiu classificar els pacients en funció de la variable `TRS`, utilitzant les mateixes característiques que en els models anteriors. El model serà de mini-batch gradient descent, és a dir, en cada iteració s'utilitzarà un subconjunt aleatori de dades per calcular el gradient i actualitzar els pesos.
 
-#### 4.3.2 Ajustament del model
+#### 4.3.1 Preprocessament de les dades
 
-#### 4.3.3 Resultat final
+Abans d'entrenar el model de regressió logística, és necessari realitzar un preprocessament adequat de les dades per assegurar que el model pugui aprendre correctament. Els passos seguits són:
+
+1. Partició de les dades:
+   Tal i com s'ha descrit a la [secció 3.6](#36-partició-del-conjunt-de-dades), dividim el conjunt de dades en un 80% per a l'entrenament i un 20% per a la prova, assegurant-nos que ambdues particions mantinguin la mateixa proporció de la variable objectiu `TRS`:
+
+   ```python
+   X_train_rl, X_test_rl, y_train_rl, y_test_rl = train_test_split(
+       X, y, test_size=0.2, random_state=42, stratify=y
+   )
+   ```
+
+2. Com que el model és sensible a variables correlacionades, eliminem les característiques que presenten una alta correlació entre elles. Això es fa per evitar problemes de multicol·linealitat que podrien afectar la convergència del model. En concret, considerarem una correlació alta quan el coeficient de correlació de Pearson sigui superior a 0.5 en valor absolut, que són:
+   - Triglycerides
+   - Glucose
+   - Ki_associative_striatum
+   - SUVRc_whole_striatum
+   - SUVRc_associative_striatum
+
+3. Codificació de variables categòriques:
+    Utilitzem l'encodificació One-Hot per a les variables categòriques, que són `Ethnicity` i `CYP2D6_metabolic_phenotype`. Això crea variables binàries per a cada categoria, permetent que el model de regressió logística les utilitzi correctament.
+  
+4. Imputació de valors perduts:
+    Com s'ha descrit a la [secció 3.3](#33-valors-perduts), utilitzem la imputació KNN amb k=5 per gestionar els valors perduts en les variables mèdiques. Serà necessari escalar temporalment les dades amb `StandardScaler` per a la imputació, i després desfem l'escalat amb `inverse_transform`.
+
+5. Transformació de les variables que no segueixen una distribució normal:
+    Per millorar la convergència del model, apliquem la transformació Yeo-Johnson a les variables numèriques que no segueixen una distribució normal, que són: `Age` i `Duration_Untreated_Psychosis`. Aquesta transformació ajuda a estabilitzar la variància i a fer que les dades siguin més semblants a una distribució normal.
+
+6. Escalat de les dades:
+    Finalment, escalem totes les característiques utilitzant l'estandardització (StandardScaler), que transforma les dades perquè tinguin una mitjana de 0 i una desviació estàndard d'1. Això és important per al model de regressió logística, ja que ajuda a millorar la convergència durant l'entrenament.
+  
+D'aquesta manera, les dades estan preparades per ser utilitzades en l'entrenament del model de regressió logística personalitzada.
+
+#### 4.3.2 Implementació del model
+
+El model que programarem ha de ser de l'estil mini-batch gradient descent, i a més de ``sklearn``. Per tant, implementarem els següents mètodes:
+
+- ``__init__``: per inicialitzar els pesos i altres paràmetres del model.
+- ``_sigmoid``: per calcular la funció sigmoide, que transforma les sortides lineals en probabilitats entre 0 i 1. Aquest mètode és essencial per a la regressió logística. Serà privat, ja que només s'utilitzarà dins de la classe del model.
+- ``_compute_class_weights``: per calcular els pesos de les classes basant-se en la distribució de la variable objectiu `TRS`. Això ajudarà a gestionar el desbalanceig de classes durant l'entrenament, problema present en el nostre conjunt de dades.
+- ``_compute_loss``: per calcular la funció de pèrdua logarítmica (log-loss) amb els pesos de les classes aplicats. Aquesta funció mesura la discrepància entre les prediccions del model i les etiquetes reals, penalitzant més els errors en la classe minoritària.
+- ``_compute_gradient``: per calcular el gradient de la funció de pèrdua respecte als pesos del model. Aquest gradient s'utilitzarà per actualitzar els pesos durant l'entrenament. Aquesta funció també inclou les regularitzacions L1 i L2 per evitar l'overfitting, seguint les fórmules donades a les lliçons de teoria:
+  - Regularització L1: S'afegeix al càlcul del gradient la suma dels signes dels pesos. Això ajuda a promoure l'esparsitat en els pesos, fent que alguns d'ells esdevinguin exactament zero.
+  - Regularització L2: S'afegeix al càlcul del gradient els pesos pel paràmetre de regularització. Això ajuda a mantenir els pesos petits, evitant que el model es sobreajusti als dades d'entrenament.
+
+- ``fit``: És el mètode principal per entrenar el model utilitzant mini-batch gradient descent. Aquest mètode actualitza els pesos del model en funció del gradient calculat per cada mini-batch de dades. Funciona de tal manera:
+  1. Inicialitza amb els valors x_train i y_train i calcula els pesos de les classes.
+  2. Per a cada època, reordena aleatòriament les dades d'entrenament per garantir que els mini-batches siguin diferents en cada època.
+  3. Després, divideix les dades en mini-batches de la mida especificada.
+  4. Prediu, calcula el gradient i actualitza els pesos i biaix per a cada mini-batch.
+
+- ``predict``: per fer prediccions binàries (0 o 1) basades en un llindar donat pel paràmetre `threshold`, que per defecte és 0.5.
+- ``get_params``: per obtenir els paràmetres actuals del model, útil per a la integració amb eines com `GridSearchCV`.
+- 
+#### 4.3.3 Ajustament del model
 
 ## 5. Model final
 
