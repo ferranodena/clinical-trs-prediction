@@ -376,8 +376,17 @@ a[href^="#bib"]:hover {
     - [4.3.1 Preprocessament de les dades](#431-preprocessament-de-les-dades)
     - [4.3.2 Implementació del model](#432-implementació-del-model)
     - [4.3.3 Ajustament del model](#433-ajustament-del-model)
-- [5. Model final](#5-model-final)
+  - [4.4 Model EBM](#44-model-ebm)
+    - [4.4.1 Preprocessament de les dades](#441-preprocessament-de-les-dades)
+    - [4.4.2 Ajustament del model](#442-ajustament-del-model)
+- [5. Selecció del model final](#5-selecció-del-model-final)
 - [6. Model Card](#6-model-card)
+  - [6.1 Informació del model](#61-informació-del-model)
+  - [6.2 Hiperparàmetres](#62-hiperparàmetres)
+  - [6.3 Dades](#63-dades)
+  - [6.4 Validació](#64-validació)
+  - [6.5 Advertències i recomanacions](#65-advertències-i-recomanacions)
+  - [6.6 Limitacions](#66-limitacions)
 - [7. Conclusions](#7-conclusions)
 - [8. Referències](#8-referències)
 
@@ -1096,7 +1105,6 @@ Finalment, el paràmetre `class_weight='balanced'` compensa automàticament el d
 Les mètriques d'avaluació del model SVM ajustat al conjunt de prova són les següents:
 
 <div class="media-row" style="align-items: center; margin: 1rem 0;">
-  <!-- Columna Esquerra: Taula -->
   <div style="flex: 0 0 40%; max-width: 320px;">
     <div class="table-container" style="margin: 0; padding: 0;">
       <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
@@ -1180,7 +1188,6 @@ Per mirar si el model pateix d'algun sobreajustament, comparem l'accuracy al con
 Ens retorna que el millor valor de C és ``0.01``, que dona un recall de 1.0. Això és impossible, ja que vol dir que tots els pacients amb TRS han estat classificats correctament, per tant hi ha algun error en el càlcul. El segon millor valor és el de ``0.1``, que ja l'havíem provat abans i ens donava un recall de 0.53. Per tant, provem amb un valor intermedi entre ``0.01`` i ``0.1``, concretament ``0.06``, per veure si podem millorar el recall sense sacrificar massa la precisió.
 
 <div class="media-row" style="align-items: center; margin: 1rem 0;">
-  <!-- Columna Esquerra: Taula -->
   <div style="flex: 0 0 40%; max-width: 320px;">
     <div class="table-container" style="margin: 0; padding: 0;">
       <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
@@ -1223,7 +1230,7 @@ Ens retorna que el millor valor de C és ``0.01``, que dona un recall de 1.0. Ai
           </tr>
         </tbody>
       </table>
-      <div class="table-caption" style="margin-top: 2px; text-align: center;">Taula X: Resultats del model SVM amb <code>C=0.06</code></div>
+      <div class="table-caption" style="margin-top: 2px; text-align: center;">Taula 6: Resultats del model SVM amb <code>C=0.06</code></div>
     </div>
   </div>
 
@@ -1504,11 +1511,12 @@ El model que programarem ha de ser de l'estil mini-batch gradient descent, i a m
 - ``_compute_gradient``: per calcular el gradient de la funció de pèrdua respecte als pesos del model. Aquest gradient s'utilitzarà per actualitzar els pesos durant l'entrenament. Aquesta funció també inclou les regularitzacions L1 i L2 per evitar l'overfitting, seguint les fórmules donades a les lliçons de teoria:
   - Regularització L1: Afegeix $\lambda \cdot sign(\omega)$ al càlcul del gradient, on $\lambda$ és el paràmetre de regularització i $\omega$ són els pesos del model. Aquesta penalització afegeix una constant positiva o negativa depenent del signe del pes, promovent l'esparsitat en els pesos.
   - Regularització L2: Afegeix $\lambda \cdot \omega$ al càlcul del gradient. Aquesta penalització és proporcional al valor del pes, ajudant a mantenir els pesos petits i evitant que el model es sobreajusti als dades d'entrenament.
-- ``fit``: És el mètode principal per entrenar el model utilitzant mini-batch gradient descent. Aquest mètode actualitza els pesos del model en funció del gradient calculat per cada mini-batch de dades. Funciona de tal manera:
+- ``fit``: És el mètode principal per entrenar el model utilitzant mini-batch gradient descent. Aquest mètode actualitza els pesos del model en funció del gradient calculat per cada mini-batch de dades. En el nostre model, serà estratificat per assegurar que cada mini-batch mantingui la mateixa proporció de la variable objectiu `TRS`. Això és important per gestionar el desbalanceig de classes durant l'entrenament. Funciona de tal manera:
   1. Inicialitza amb els valors x_train i y_train i calcula els pesos de les classes.
-  2. Per a cada època, reordena aleatòriament les dades d'entrenament per garantir que els mini-batches siguin diferents en cada època.
-  3. Després, divideix les dades en mini-batches de la mida especificada.
-  4. Prediu, calcula el gradient i actualitza els pesos i biaix per a cada mini-batch.
+  2. Calcula el nombre de mini-batches basant-se en la mida del lot i el nombre total d'exemples, assegurant-se que cada mini-batch sigui estratificat.
+  3. Per a cada època, reordena aleatòriament les dades d'entrenament per garantir que els mini-batches siguin diferents en cada època.
+  4. Després, divideix les dades en mini-batches de la mida especificada.
+  5. Prediu, calcula el gradient i actualitza els pesos i biaix per a cada mini-batch.
 
 - ``predict``: per fer prediccions binàries (0 o 1) basades en un llindar donat pel paràmetre `threshold`, que per defecte és 0.5.
 - ``get_params``: per obtenir els paràmetres actuals del model, això és necessari per utilitzar el model amb `GridSearchCV`.
@@ -1533,45 +1541,45 @@ Com que hem programat el model de regressió logística de manera que sigui comp
       <tr>
         <td style="text-align:left;"><b><code>learning_rate</code></b></td>
         <td style="text-align:left;">[0.0001, 0.005, 0.01, 0.05, 0.1]</td>
-        <td style="text-align:left;">Taxa d'aprenentatge: controla la velocitat amb què el model actualitza els pesos a cada iteració.</td>
+        <td style="text-align:left;">Taxa d'aprenentatge: controla la velocitat amb què el model actualitza els pesos a cada iteració, afectant la rapidesa i l'estabilitat de la convergència.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>batch_size</code></b></td>
-        <td style="text-align:left;">[16, 32, 64]</td>
-        <td style="text-align:left;">Mida del lot: nombre de mostres utilitzades en cada actualització dels pesos en l'entrenament.</td>
+        <td style="text-align:left;">[16, 32, 64, 128]</td>
+        <td style="text-align:left;">Mida del lot: nombre de mostres utilitzades en cada actualització dels pesos, equilibrant soroll en el gradient i temps de càlcul.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>n_iterations</code></b></td>
-        <td style="text-align:left;">[300, 500, 700]</td>
-        <td style="text-align:left;">Nombre d'iteracions: quantitat màxima de passades d'optimització sobre les dades d'entrenament.</td>
+        <td style="text-align:left;">[100, 300, 500, 700, 900, 1000]</td>
+        <td style="text-align:left;">Nombre d'iteracions: màxim de passades d'optimització sobre les dades d'entrenament fins a la convergència del model.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>regularization</code></b></td>
         <td style="text-align:left;">['l1', 'l2', None]</td>
-        <td style="text-align:left;">Tipus de regularització: L1 fomenta la sparsitat dels pesos, L2 els manté petits; None implica absència de regularització explícita.</td>
+        <td style="text-align:left;">Tipus de regularització: L1 fomenta pesos esparsos, L2 penalitza pesos grans; None implica absència de terme de regularització.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>lambda_reg</code></b></td>
-        <td style="text-align:left;">[0.01, 0.1, 1]</td>
-        <td style="text-align:left;">Força de la regularització: coeficient que controla la intensitat del terme de penalització en la funció de pèrdua.</td>
+        <td style="text-align:left;">[0.01, 0.1, 0.5, 1.0]</td>
+        <td style="text-align:left;">Força de la regularització: coeficient que controla la intensitat de la penalització aplicada als pesos en la funció de pèrdua.</td>
       </tr>
       <tr>
         <td style="text-align:left;"><b><code>class_weight</code></b></td>
         <td style="text-align:left;">['balanced', {0: 1, 1: 2}]</td>
-        <td style="text-align:left;">Pes de les classes: ajusta la importància relativa de cada classe per tractar el desbalanceig, donant més pes a la classe minoritària.</td>
+        <td style="text-align:left;">Pes de les classes: ajusta la importància relativa de cada classe en conjunts desbalancejats, donant més pes a la classe minoritària TRS.</td>
       </tr>
     </tbody>
   </table>
-  <div class="table-caption">Taula X: Espai de cerca d'hiperparàmetres per al model de regressió logística.</div>
+  <div class="table-caption">Taula 9: Espai de cerca d'hiperparàmetres per al model de regressió logística.</div>
 </div>
 
-Com que per sobre de tot volem evitar l'overfitting, he considerat valors baixos per a la taxa d'aprenentatge, valors mitjans de nombre d'iteracions i he inclòs opcions de regularització L1 i L2. També he inclòs diferents mides de lot per observar com afecten la convergència del model. El paràmetre `class_weight` s'ha establert amb l'opció 'balanced' i un pes personalitzat per donar més importància a la classe minoritària (TRS). El resultat obtingut ha estat:
+Com que per sobre de tot volem evitar l'overfitting, he considerat un rang àmpli de valors per a la taxa d'aprenentatge, des de valors molt petits (0.0001) fins a valors més grans (0.1). Això permet explorar tant opcions que afavoreixen una convergència lenta i estable com opcions que podrien accelerar l'entrenament. Pel que fa a la mida del lot, he inclòs valors petits (16) i grans (128) per trobar un equilibri entre l'estabilitat del gradient i l'eficiència computacional. El nombre d'iteracions s'ha establert en un rang ampli (100 a 1000) per assegurar que el model tingui suficient temps per aprendre sense sobreajustar-se. Finalment, he considerat tant la regularització L1 com L2, així com l'absència de regularització, per determinar quin enfocament funciona millor amb les dades específiques. El resultat ha estat:
 
 ```bash
-{'batch_size': 64, 'class_weight': {0: 1, 1: 2}, 'lambda_reg': 1, 'learning_rate': 0.0001, 'n_iterations': 300, 'regularization': 'l2'}```
+{'batch_size': 128, 'class_weight': {0: 1, 1: 2}, 'lambda_reg': 1.0, 'learning_rate': 0.0001, 'n_iterations': 500, 'regularization': 'l2'}
 ```
 
-El model utilitza una **mida de lot de 64** per equilibrar l'eficiència computacional i l'estabilitat del gradient. La **taxa d'aprenentatge de 0.0001** assegura actualitzacions molt petites dels pesos, ajudant a prevenir oscil·lacions i millorant la convergència. S'han realitzat **300 iteracions**, suficients per permetre que el model aprengui sense sobreajustar-se. La regularització L2 amb un **lambda de 1** penalitza els pesos grans, ajudant a mantenir-los petits i evitant l'overfitting. Finalment, el pes personalitzat `{0: 1, 1: 2}` dóna més importància a la classe minoritària (TRS), millorant la capacitat del model per detectar aquests casos.
+El model obtingut utilitza una **mida de lot de 128** per equilibrar l'estabilitat del gradient i l'eficiència computacional. La **taxa d'aprenentatge de 0.0001** indica que el model actualitza els pesos de manera molt gradual, ajudant a prevenir l'overfitting. Amb **500 iteracions**, el model té suficient temps per aprendre les relacions entre les característiques i la variable objectiu sense sobreajustar-se. La **regularització L2 amb un paràmetre de 1.0** penalitza els pesos grans, ajudant a mantenir els pesos petits i evitant que el model es sobreajusti als dades d'entrenament. A més, l'ús de `class_weight={0: 1, 1: 2}` dóna més pes a la classe minoritària (TRS), millorant la capacitat del model per detectar pacients amb resistència al tractament.
 
 Les mètriques d'avaluació del model de regressió logística ajustat al conjunt de prova són les següents:
 
@@ -1592,20 +1600,20 @@ Les mètriques d'avaluació del model de regressió logística ajustat al conjun
                     <tr>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.74</td>
-                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.68</td>
-                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.71</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.67</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.70</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1232</td>
                     </tr>
                     <tr style="background-color: #f5f5f5;">
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
-                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.41</td>
-                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.48</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.40</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.49</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.44</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">568</td>
                     </tr>
                     <tr>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
-                        <td colspan="3" style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
+                        <td colspan="3" style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.61</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
                     </tr>
                     <tr style="background-color: #f5f5f5;">
@@ -1618,19 +1626,19 @@ Les mètriques d'avaluació del model de regressió logística ajustat al conjun
                     <tr>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.63</td>
-                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.61</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
                         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
                     </tr>
                 </tbody>
             </table>
-            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula X: Resultats de classificació per al model de regressió logística.</div>
+            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula 10: Resultats de classificació actualitzats per al model de regressió logística.</div>
         </div>
     </div>
     <div class="media-text" style="flex: 1; font-size: 8.5pt; line-height: 1.4;">
-        <p style="margin: 0 0 0.5rem 0;">El model de <b>regressió logística</b> presenta un rendiment moderat, amb una <b>accuracy</b> del 62% i un F1-score ponderat també del 62%, cosa que indica un equilibri discret entre precisió i recall global.</p>
-        <p style="margin: 0 0 0.5rem 0;">En el cas de la classe <b>TRS (1)</b>, el model identifica correctament el <b>48% dels pacients (recall)</b>, amb una precisió del 41%, reflectint una capacitat limitada per detectar de forma fiable els pacients resistents al tractament tot i una lleugera millora respecte als models previs.</p>
-        <p style="margin: 0;">Per a la classe <b>no TRS (0)</b>, s'obté una precisió del <b>74%</b> i un recall del <b>68%</b>, mostrant una millor capacitat per classificar correctament els casos negatius. Aquest patró manté un compromís similar als models anteriors, prioritzant parcialment la detecció de la classe minoritària, rellevant en el context clínic on no detectar un cas TRS té elevades conseqüències.</p>
+        <p style="margin: 0 0 0.5rem 0;">El model de <b>regressió logística</b> ajustat presenta una <b>accuracy</b> del 61% i un F1-score ponderat del 62%, mantenint un rendiment global moderat però coherent amb el desbalanceig de classes.</p>
+        <p style="margin: 0 0 0.5rem 0;">Per a la classe <b>TRS (1)</b>, el model assoleix una precisió del 40% i un <b>recall del 49%</b>, cosa que indica una lleugera millora en la capacitat d’identificar pacients resistents al tractament, tot i que encara es produeixen bastants falsos positius i falsos negatius.</p>
+        <p style="margin: 0;">En la classe <b>no TRS (0)</b>, la precisió del <b>74%</b> i el recall del <b>67%</b> mostren una bona capacitat per classificar correctament la majoria de casos negatius. Aquest patró reforça la necessitat de buscar un equilibri entre la detecció de la classe minoritària i el manteniment d’una precisió acceptable en el context clínic. </p>
     </div>
 </div>
 
@@ -1646,9 +1654,8 @@ Fem un estudi del rendiment del model en funció de la mida del batch:
   </div>
 </div>
 
-Pel que fa al rendiment del model en funció de la mida del batch, podem observar que una mida de batch més gran tendeix a reduir el temps d'execució total del model, ja que es realitzen menys actualitzacions dels pesos durant l'entrenament. Pel que fa al rendiment general, mesurat amb la mètrica F1-score, sembla que una mida de batch de 128 ofereix el millor valor de F1-score, suggerint que aquesta mida permet un bon equilibri entre l'estabilitat del gradient i l'eficiència computacional. També podem veure que el F1-score sobre el conjunt de validació és constant a aproximadament a 0.03 punts per sota, indicant un bon nivell de generalització del model. Ens quedem doncs amb una mida de batch de 128, ja que ofereix un bon compromís entre temps d'execució i rendiment del model.
-
-Visualitzem la matriu de confusió i la corba ROC del model amb batch de 128:
+Podem veure com el millor model efectivament s'obté amb una mida de batch de 128, ja que és on s'assoleix el millor F1-score. A més, observem que els valors f1 pel conjunt de validació són molt similars als del conjunt de prova, la qual cosa indica que el model no pateix d'overfitting. Pel que fa al temps d'execució, podem veure com aquest varia de manera aleatòria amb la mida del batch, ja que no hi ha una tendència clara. Aquest comportament no és el que podríem esperar, ja que el que seria lògic és que disminuís a mesura que augmenta la mida del batch, ja que es necessiten menys actualitzacions dels pesos. No obstant això, suposo que aquest comportament pot ser degut a diversos factors, com ara la implementació del model o les característiques específiques del conjunt de dades utilitzat.
+Visualitzem la matriu de confusió i la corba ROC del model:
 
 <div class="image-row">
   <div class="image-column">
@@ -1660,9 +1667,190 @@ Visualitzem la matriu de confusió i la corba ROC del model amb batch de 128:
     <div class="caption">Figura 22: Corba ROC del model de regressió logística</div>
   </div>
 </div>
-## 5. Model final
+
+Podem veure que aquest model és lleugerament millor que els anteriors en termes de precisió i recall per a la classe TRS, ja que identifica correctament **825 casos positius** (True Positives) amb un nombre de falsos positius (273) més baix que els altres models. Això indica que el model és capaç de detectar millor els pacients amb resistència al tractament, tot i que encara hi ha marge de millora. L'**AUC de 0.63** indica que el model té una capacitat de discriminació moderada, millorant lleugerament respecte als models SVM i XGBoost. La corba ROC mostra una millora en la separació de les classes, tot i que encara no és òptima.
+
+Per tal de millorar el rendiment del model, potser amb l'objectiu de minimitzar falsos negatius sacrificant una mica la precisió, es podrien explorar diferents llindars de decisió o ajustar els pesos de les classes de manera més agressiva. Això podria ajudar a augmentar el recall per a la classe TRS, millorant la capacitat del model per identificar pacients resistents al tractament. Explorem com canvien les mètriques en funció del llindar de decisió:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/23.png" alt="Mètriques del model de regressió logística segons el llindar de decisió">
+    <div class="caption">Figura 23: Mètriques del model de regressió logística segons el llindar de decisió</div>
+  </div>
+  <div class="image-column">
+    <img src="images/24.png" alt="Corba Precision-Recall del model de regressió logística">
+    <div class="caption">Figura 24: Corba Precision-Recall del model de regressió logística</div>
+  </div>
+</div>
+
+Com veiem a la figura 23, podríem establir el llindar de decisió cap a 0.45 si volguéssim un alt recall per a la classe TRS, ja que en aquest punt s'assoleix un recall del 80%, però sacrificant la precisió, que cau al 30%. Això podria ser útil en un context clínic on és més important identificar la majoria de pacients resistents al tractament, encara que això impliqui un augment dels falsos positius. Si volem un model més equilibrat, podríem optar per un llindar de decisió al voltant de 0.50-0.51, on la precisió i el recall es troben en un punt mitjà. Això permetria un equilibri entre la detecció de pacients resistents al tractament i la minimització dels falsos positius.
+La precisió mitjana de 0.41 és l’àrea sota la corba de la figura 24 i resumeix el compromís global precision–recall del model per a la classe positiva. Un valor més alt indicaria un millor rendiment en la identificació de pacients resistents al tractament, especialment en conjunts de dades desbalancejats com el nostre. En tenir un 0.41, el model mostra una capacitat moderada per equilibrar precisió i recall, però hi ha marge de millora per optimitzar la detecció de la classe minoritària.
+
+Per tant, podem afirmar que el model de regressió logística personalitzat ha aconseguit un rendiment lleugerament millor que els models SVM i XGBoost, especialment en la identificació de pacients amb resistència al tractament. No obstant això, encara hi ha marge de millora, i es podrien explorar diferents estratègies per optimitzar encara més el model.
+
+Per interpretabilitat, mirem quins són els pesos més importants del model:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/25.png" alt="Pesos del model de regressió logística">
+    <div class="caption">Figura 25: Pesos del model de regressió logística</div>
+  </div>
+</div>
+
+### 4.4 Model EBM
+
+Les Explainable Boosting Machines (EBM) són un tipus de model d'aprenentatge automàtic que combina la potència dels models de boosting amb la interpretabilitat dels models additius generalitzats. Aquestes màquines estan dissenyades per ser interpretables, permetent als usuaris comprendre com cada característica contribueix a les prediccions del model. Són molt fàcils d'entrenar, ja que no requereixen gaire ajustament d'hiperparàmetres i poden manejar dades amb característiques mixtes (numèriques i categòriques) sense necessitat de preprocessament extensiu. [[EMB25]](#bib4)
+
+Hem entrenat un model EBM utilitzant la llibreria `interpret` de Python, que proporciona una implementació eficient i fàcil d'utilitzar d'aquest tipus de models. El model s'ha ajustat utilitzant les mateixes dades preprocesades que els altres models.
+
+#### 4.4.1 Preprocessament de les dades
+
+Els models EBM poden manejar dades amb característiques mixtes (numèriques i categòriques) sense necessitat de preprocessament extensiu. No obstant això, per assegurar un rendiment òptim, només hem realitzat un pas de preprocessament:
+
+Partició de les dades:
+   Tal i com s'ha descrit a la [secció 3.6](#36-partició-del-conjunt-de-dades), dividim el conjunt de dades en un 80% per a l'entrenament i un 20% per a la prova, assegurant-nos que ambdues particions mantinguin la mateixa proporció de la variable objectiu `TRS`:
+
+   ```python
+   X_train_ebm, X_test_ebm, y_train_ebm, y_test_ebm = train_test_split(
+       X, y, test_size=0.2, random_state=42, stratify=y
+   )
+   ```
+
+#### 4.4.2 Ajustament del model
+
+Hem entrenat el model EBM amb els paràmetres per defecte proporcionats per la llibreria `interpret`. Els resultats han estat molt dolents degut al desbalanceig de classes. Per tant, farem servir el paràmetre `sample_weight` per donar més pes a la classe minoritària (TRS) durant l'entrenament. Assignarem un pes proporcional a la inversa de la freqüència de cada classe en el conjunt d'entrenament. Això ajudarà el model a prestar més atenció als exemples de la classe minoritària i millorar la seva capacitat per identificar pacients amb resistència al tractament.
+
+Per tal de refinar el model, explorarem diferents valors pels seguents paràmetres:
+
+Aquí tens la taula explicativa amb els hiperparàmetres de la graella (grid) per al model EBM, sense les referències numèriques:
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Hiperparàmetre</th>
+        <th style="text-align:left;">Valors provats</th>
+        <th style="text-align:left;">Significat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left;"><b><code>outer_bags</code></b></td>
+        <td style="text-align:left;"></td>
+        <td style="text-align:left;">Nombre de cicles de bagging extern: controla l'estabilitat del model reduint la variància de les prediccions; valors més alts ajuden a mitigar l'efecte del soroll i els falsos positius.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>interactions</code></b></td>
+        <td style="text-align:left;"></td>[
+        <td style="text-align:left;">Termes d'interacció: nombre de parelles de variables que el model detecta automàticament. Un valor de 0 crea un model additiu pur (GAM), mentre que 8 permet capturar relacions clau entre variables.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>max_bins</code></b></td>
+        <td style="text-align:left;"></td>
+        <td style="text-align:left;">Nombre màxim de bins: defineix la resolució de les variables numèriques. Reduir-lo simplifica el model i ajuda a evitar el sobreajust (overfitting) en patrons de dades sorollosos.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>learning_rate</code></b></td>
+        <td style="text-align:left;">[0.01, 0.02]</td>
+        <td style="text-align:left;">Taxa d'aprenentatge: controla la magnitud de l'actualització de les funcions de cada variable en cada pas de boosting; valors baixos asseguren una convergència més estable i controlada.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption">Taula 11: Espai de cerca d'hiperparàmetres per a l'optimització de l'Explainable Boosting Machine (EBM).</div>
+</div>
+
+El millor model obtingut té els següents hiperparàmetres:
+
+```bash
+{'interactions': 0, 'learning_rate': 0.02, 'max_bins': 64, 'outer_bags': 24}```
+```
+
+Per tant, el model EBM final utilitza **0 termes d'interacció**, indicant que un model additiu pur (GAM) és suficient per capturar les relacions entre les característiques i la variable objectiu en aquest cas. La **taxa d'aprenentatge de 0.02** permet una actualització gradual de les funcions de cada variable, ajudant a evitar l'overfitting. Amb **64 bins màxims**, el model manté una bona resolució per a les variables numèriques sense sobreajustar-se als patrons sorollosos. Finalment, amb **24 cicles de bagging externs**, el model aconsegueix una estabilitat millorada en les prediccions, reduint la variància i millorant la generalització. [[EMB25]](#bib4)
+
+Les mètriques d'avaluació del model EBM ajustat al conjunt de prova són les següents:
+
+              precision    recall  f1-score   support
+
+           0       0.76      0.55      0.64      1232
+           1       0.39      0.63      0.48       568
+
+    accuracy                           0.58      1800
+   macro avg       0.58      0.59      0.56      1800
+weighted avg       0.65      0.58      0.59      1800
+
+El model EBM ajustat presenta una **accuracy** del 58% i un F1-score ponderat del 59%, indicant un rendiment global moderat. Per a la classe **TRS (1)**, el model assoleix una precisió del 39% i un **recall del 63%**, millorant la capacitat d’identificar pacients resistents al tractament en comparació amb els models anteriors. En la classe **no TRS (0)**, la precisió del **76%** i el recall del **55%** mostren una bona capacitat per classificar correctament la majoria de casos negatius. Aquest patró reforça la necessitat de buscar un equilibri entre la detecció de la classe minoritària i el manteniment d’una precisió acceptable en el context clínic.
+
+Pel que fa a la corba ROC i la matriu de confusió del model EBM, les podem veure a continuació:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/26.png" alt="Matriu de confusió del model EBM">
+    <div class="caption">Figura 26: Matriu de confusió del model EBM</div>
+  </div>
+  <div class="image-column">
+    <img src="images/27.png" alt="Corba ROC del model EBM">
+    <div class="caption">Figura 27: Corba ROC del model EBM</div>
+  </div>
+</div>
+
+Podem veure que aquest model és millor que els anteriors en termes de precisió i recall per a la classe TRS, ja que identifica correctament **357 casos positius** (True Positives) amb un nombre de falsos positius (552) més baix que els altres models. Això indica que el model és capaç de detectar millor els pacients amb resistència al tractament, tot i que encara hi ha marge de millora. L'**AUC de 0.62** indica que el model té una capacitat de discriminació moderada, igualant respecte al model de regressió logística. La corba ROC mostra una millora en la separació de les classes, tot i que encara no és òptima. Per comprovar si hi ha sobreajustament, comparem les mètriques roc_auc per al conjunt de validació i el conjunt de prova:
+
+```bash
+AUC Train: 0.6608
+AUC Test: 0.6235
+Diferència: 0.0373
+```
+
+La diferència d'AUC entre el conjunt d'entrenament i el conjunt de prova és de només 0.0373, la qual cosa indica que el model no pateix d'overfitting significatiu. Això suggereix que el model EBM generalitza bé als dades no vistes, mantenint un rendiment consistent entre els conjunts d'entrenament i prova.
+
+## 5. Selecció del model final
+
+Com que estem en un context mèdic, on és crucial identificar correctament els pacients amb resistència al tractament (TRS), la mètrica més important per a nosaltres és el recall de la classe positiva (TRS). Això es deu al fet que volem minimitzar els falsos negatius, és a dir, els casos en què el model no identifica un pacient com a TRS quan realment ho és. Identificar aquests pacients és fonamental per garantir que rebin el tractament adequat i evitar complicacions mèdiques greus. Recollim en una taula les mètriques de recall per a la classe TRS dels 4 models:
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Model</th>
+        <th style="text-align:left;">Recall TRS (1)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>SVM</b></td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.42</td>
+      </tr>
+      <tr style="background-color: #f5f5f5;">
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>XGBoost</b></td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.47</td>
+      </tr>
+      <tr>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>Regressió Logística</b></td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.49</td>
+      </tr>
+      <tr style="background-color: #f5f5f5;">
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>EBM</b></td>
+        <td style="padding: 4px 5px; border: 1px solid #ffff00; text-align: center;">0.63</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption">Taula 12: Mètrica de recall per a la classe TRS dels diferents models.</div>
+
+És evident que el model EBM és el que presenta el millor recall per a la classe TRS, amb un valor de 0.63. Això significa que el model és capaç d'identificar correctament el 63% dels pacients amb resistència al tractament, superant significativament els altres models. Per tant, donada la importància de minimitzar els falsos negatius en aquest context mèdic, seleccionem l'EBM com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
 
 ## 6. Model Card
+
+### 6.1 Informació del model
+
+### 6.2 Hiperparàmetres
+
+### 6.3 Dades
+
+### 6.4 Validació
+
+### 6.5 Advertències i recomanacions
+
+### 6.6 Limitacions
 
 ## 7. Conclusions
 
@@ -1673,3 +1861,5 @@ Visualitzem la matriu de confusió i la corba ROC del model amb batch de 128:
 <a name="bib2"></a> [XGB25]: XGBoost developers. (s.f.). XGBoost Parameters. Recuperat el 21 de desembre de 2025, de [https://xgboost.readthedocs.io/en/stable/parameter.html](https://xgboost.readthedocs.io/en/stable/parameter.html)
 
 <a name="bib3"></a> [SKL25log]: scikit-learn Developers. (s. f.). LogisticRegression — scikit-learn 1.8.0 documentation. Scikit-learn. Recuperat el 23 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html)
+
+<a name="bib4"></a> [EBM25]: InterpretML Contributors. (s. f.). Explainable Boosting Machine — InterpretML documentation. InterpretML. Recuperat el 23 de desembre de 2025, de [https://interpret.ml/docs/ebm.html](https://interpret.ml/docs/ebm.html)
