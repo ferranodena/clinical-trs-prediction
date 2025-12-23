@@ -1091,7 +1091,7 @@ On:
 - **$d$**: Correspon al grau del polinomi
 - **$r$**: És el terme independent `coef0`, que per defecte és $0.0$.
 
-Finalment, el paràmetre `class_weight='balanced'` compensa automàticament el desequilibri entre classes, mentre que `gamma='auto'` escala la influència de cada punt segons l'invers del nombre de característiques del conjunt de dades.[[SKL25]](#bib1)
+Finalment, el paràmetre `class_weight='balanced'` compensa automàticament el desequilibri entre classes, mentre que `gamma='auto'` escala la influència de cada punt segons l'invers del nombre de característiques del conjunt de dades.[[SKL25svc]](#bib1)
 
 Les mètriques d'avaluació del model SVM ajustat al conjunt de prova són les següents:
 
@@ -1493,16 +1493,17 @@ D'aquesta manera, les dades estan preparades per ser utilitzades en l'entrenamen
 
 #### 4.3.2 Implementació del model
 
-El model que programarem ha de ser de l'estil mini-batch gradient descent, i a més de ``sklearn``. Per tant, implementarem els següents mètodes:
+El model que programarem ha de ser de l'estil mini-batch gradient descent, i a més de ``sklearn``. Per tant, implementarem els següents mètodes[[SKL25log]](#bib3):
 
 - ``__init__``: per inicialitzar els pesos i altres paràmetres del model.
 - ``_sigmoid``: per calcular la funció sigmoide, que transforma les sortides lineals en probabilitats entre 0 i 1. Aquest mètode és essencial per a la regressió logística. Serà privat, ja que només s'utilitzarà dins de la classe del model.
 - ``_compute_class_weights``: per calcular els pesos de les classes basant-se en la distribució de la variable objectiu `TRS`. Això ajudarà a gestionar el desbalanceig de classes durant l'entrenament, problema present en el nostre conjunt de dades.
-- ``_compute_loss``: per calcular la funció de pèrdua logarítmica (log-loss) amb els pesos de les classes aplicats. Aquesta funció mesura la discrepància entre les prediccions del model i les etiquetes reals, penalitzant més els errors en la classe minoritària.
+- ``_compute_loss``: calcula el cross-entropy loss entre les prediccions i les etiquetes reals. Primer de tot força que els valors mai siguin 0. Després calcula la loss de la seguent manera: $-\frac{1}{m} \sum_{i=1}^{m} \left[ y^{(i)} \log(\hat{y}^{(i)}) + (1 - y^{(i)}) \log(1 - \hat{y}^{(i)}) \right]$, on $m$ és el nombre d'exemples, $y^{(i)}$ és l'etiqueta real i $\hat{y}^{(i)}$ és la predicció del model per a l'exemple $i$. Estarà ponderat pels pesos de les classes calculats prèviament per gestionar el desbalanceig. També inclou les regularitzacions L1 i L2 per evitar l'overfitting, seguint les fórmules donades a les lliçons de teoria:
+  - Regularització L1: Afegeix $\lambda \sum |\omega|$ al càlcul de la loss, on $\lambda$ és el paràmetre de regularització i $\omega$ són els pesos del model. Penalitza el valor absolut dels pesos, cosa que pot portar a que alguns pesos esdevinguin exactament zero, promovent l'esparsitat.
+  - Regularització L2: Afegeix $\frac{\lambda}{2} \sum \omega^2$ al càlcul de la loss. Penalitza els pesos grans, ajudant a mantenir els pesos petits i evitant que el model es sobreajusti als dades d'entrenament.
 - ``_compute_gradient``: per calcular el gradient de la funció de pèrdua respecte als pesos del model. Aquest gradient s'utilitzarà per actualitzar els pesos durant l'entrenament. Aquesta funció també inclou les regularitzacions L1 i L2 per evitar l'overfitting, seguint les fórmules donades a les lliçons de teoria:
-  - Regularització L1: S'afegeix al càlcul del gradient la suma dels signes dels pesos. Això ajuda a promoure l'esparsitat en els pesos, fent que alguns d'ells esdevinguin exactament zero.
-  - Regularització L2: S'afegeix al càlcul del gradient els pesos pel paràmetre de regularització. Això ajuda a mantenir els pesos petits, evitant que el model es sobreajusti als dades d'entrenament.
-
+  - Regularització L1: Afegeix $\lambda \cdot sign(\omega)$ al càlcul del gradient, on $\lambda$ és el paràmetre de regularització i $\omega$ són els pesos del model. Aquesta penalització afegeix una constant positiva o negativa depenent del signe del pes, promovent l'esparsitat en els pesos.
+  - Regularització L2: Afegeix $\lambda \cdot \omega$ al càlcul del gradient. Aquesta penalització és proporcional al valor del pes, ajudant a mantenir els pesos petits i evitant que el model es sobreajusti als dades d'entrenament.
 - ``fit``: És el mètode principal per entrenar el model utilitzant mini-batch gradient descent. Aquest mètode actualitza els pesos del model en funció del gradient calculat per cada mini-batch de dades. Funciona de tal manera:
   1. Inicialitza amb els valors x_train i y_train i calcula els pesos de les classes.
   2. Per a cada època, reordena aleatòriament les dades d'entrenament per garantir que els mini-batches siguin diferents en cada època.
@@ -1510,10 +1511,155 @@ El model que programarem ha de ser de l'estil mini-batch gradient descent, i a m
   4. Prediu, calcula el gradient i actualitza els pesos i biaix per a cada mini-batch.
 
 - ``predict``: per fer prediccions binàries (0 o 1) basades en un llindar donat pel paràmetre `threshold`, que per defecte és 0.5.
-- ``get_params``: per obtenir els paràmetres actuals del model, útil per a la integració amb eines com `GridSearchCV`.
-- 
+- ``get_params``: per obtenir els paràmetres actuals del model, això és necessari per utilitzar el model amb `GridSearchCV`.
+- ``set_params``: per establir nous valors als paràmetres del model, també necessari per a `GridSearchCV`.
+
+Una vegada implementats aquests mètodes, el model de regressió logística estarà llest per ser entrenat i avaluat amb les dades preprocesades.
+
 #### 4.3.3 Ajustament del model
 
+Com que hem programat el model de regressió logística de manera que sigui compatible amb l'ús de la gird, doncs utilitzarem `GridSearchCV` per trobar els millors hiperparàmetres per al nostre model personalitzat. Els hiperparàmetres que considerarem són:
+
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Hiperparàmetre</th>
+        <th style="text-align:left;">Valors provats</th>
+        <th style="text-align:left;">Significat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left;"><b><code>learning_rate</code></b></td>
+        <td style="text-align:left;">[0.0001, 0.005, 0.01, 0.05, 0.1]</td>
+        <td style="text-align:left;">Taxa d'aprenentatge: controla la velocitat amb què el model actualitza els pesos a cada iteració.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>batch_size</code></b></td>
+        <td style="text-align:left;">[16, 32, 64]</td>
+        <td style="text-align:left;">Mida del lot: nombre de mostres utilitzades en cada actualització dels pesos en l'entrenament.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>n_iterations</code></b></td>
+        <td style="text-align:left;">[300, 500, 700]</td>
+        <td style="text-align:left;">Nombre d'iteracions: quantitat màxima de passades d'optimització sobre les dades d'entrenament.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>regularization</code></b></td>
+        <td style="text-align:left;">['l1', 'l2', None]</td>
+        <td style="text-align:left;">Tipus de regularització: L1 fomenta la sparsitat dels pesos, L2 els manté petits; None implica absència de regularització explícita.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>lambda_reg</code></b></td>
+        <td style="text-align:left;">[0.01, 0.1, 1]</td>
+        <td style="text-align:left;">Força de la regularització: coeficient que controla la intensitat del terme de penalització en la funció de pèrdua.</td>
+      </tr>
+      <tr>
+        <td style="text-align:left;"><b><code>class_weight</code></b></td>
+        <td style="text-align:left;">['balanced', {0: 1, 1: 2}]</td>
+        <td style="text-align:left;">Pes de les classes: ajusta la importància relativa de cada classe per tractar el desbalanceig, donant més pes a la classe minoritària.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-caption">Taula X: Espai de cerca d'hiperparàmetres per al model de regressió logística.</div>
+</div>
+
+Com que per sobre de tot volem evitar l'overfitting, he considerat valors baixos per a la taxa d'aprenentatge, valors mitjans de nombre d'iteracions i he inclòs opcions de regularització L1 i L2. També he inclòs diferents mides de lot per observar com afecten la convergència del model. El paràmetre `class_weight` s'ha establert amb l'opció 'balanced' i un pes personalitzat per donar més importància a la classe minoritària (TRS). El resultat obtingut ha estat:
+
+```bash
+{'batch_size': 64, 'class_weight': {0: 1, 1: 2}, 'lambda_reg': 1, 'learning_rate': 0.0001, 'n_iterations': 300, 'regularization': 'l2'}```
+```
+
+El model utilitza una **mida de lot de 64** per equilibrar l'eficiència computacional i l'estabilitat del gradient. La **taxa d'aprenentatge de 0.0001** assegura actualitzacions molt petites dels pesos, ajudant a prevenir oscil·lacions i millorant la convergència. S'han realitzat **300 iteracions**, suficients per permetre que el model aprengui sense sobreajustar-se. La regularització L2 amb un **lambda de 1** penalitza els pesos grans, ajudant a mantenir-los petits i evitant l'overfitting. Finalment, el pes personalitzat `{0: 1, 1: 2}` dóna més importància a la classe minoritària (TRS), millorant la capacitat del model per detectar aquests casos.
+
+Les mètriques d'avaluació del model de regressió logística ajustat al conjunt de prova són les següents:
+
+<div class="media-row" style="display: flex; align-items: center; margin: 1rem 0; gap: 15px;">
+    <div style="flex: 0 0 40%; max-width: 320px;">
+        <div class="table-container" style="margin: 0; padding: 0;">
+            <table style="border-collapse: collapse; width: 100%; line-height: 1.2; font-size: 7.5pt;">
+                <thead>
+                    <tr style="background-color: #e0e0e0;">
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: left;">Classe</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Prec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Rec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">F1</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Supp.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.74</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.68</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.71</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1232</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.41</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.48</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.44</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">568</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+                        <td colspan="3" style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.57</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.57</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.63</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.62</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula X: Resultats de classificació per al model de regressió logística.</div>
+        </div>
+    </div>
+    <div class="media-text" style="flex: 1; font-size: 8.5pt; line-height: 1.4;">
+        <p style="margin: 0 0 0.5rem 0;">El model de <b>regressió logística</b> presenta un rendiment moderat, amb una <b>accuracy</b> del 62% i un F1-score ponderat també del 62%, cosa que indica un equilibri discret entre precisió i recall global.</p>
+        <p style="margin: 0 0 0.5rem 0;">En el cas de la classe <b>TRS (1)</b>, el model identifica correctament el <b>48% dels pacients (recall)</b>, amb una precisió del 41%, reflectint una capacitat limitada per detectar de forma fiable els pacients resistents al tractament tot i una lleugera millora respecte als models previs.</p>
+        <p style="margin: 0;">Per a la classe <b>no TRS (0)</b>, s'obté una precisió del <b>74%</b> i un recall del <b>68%</b>, mostrant una millor capacitat per classificar correctament els casos negatius. Aquest patró manté un compromís similar als models anteriors, prioritzant parcialment la detecció de la classe minoritària, rellevant en el context clínic on no detectar un cas TRS té elevades conseqüències.</p>
+    </div>
+</div>
+
+Fem un estudi del rendiment del model en funció de la mida del batch:
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/19.png" alt="Rendiment del model de regressió logística segons la mida del batch">
+    <div class="caption">Figura 19: Rendiment del model de regressió logística segons la mida del batch</div>
+  </div>
+  <div class="image-column">
+    <img src="images/20.png" alt="Corba ROC del model de regressió logística">
+    <div class="caption">Figura 20: Temps d'execució del model de regressió logística segons la mida del batch</div>
+  </div>
+</div>
+
+Pel que fa al rendiment del model en funció de la mida del batch, podem observar que una mida de batch més gran tendeix a reduir el temps d'execució total del model, ja que es realitzen menys actualitzacions dels pesos durant l'entrenament. Pel que fa al rendiment general, mesurat amb la mètrica F1-score, sembla que una mida de batch de 128 ofereix el millor valor de F1-score, suggerint que aquesta mida permet un bon equilibri entre l'estabilitat del gradient i l'eficiència computacional. També podem veure que el F1-score sobre el conjunt de validació és constant a aproximadament a 0.03 punts per sota, indicant un bon nivell de generalització del model. Ens quedem doncs amb una mida de batch de 128, ja que ofereix un bon compromís entre temps d'execució i rendiment del model.
+
+Visualitzem la matriu de confusió i la corba ROC del model amb batch de 128:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/21.png" alt="Matriu de confusió del model de regressió logística">
+    <div class="caption">Figura 21: Matriu de confusió del model de regressió logística</div>
+  </div>
+  <div class="image-column">
+    <img src="images/22.png" alt="Corba ROC del model de regressió logística">
+    <div class="caption">Figura 22: Corba ROC del model de regressió logística</div>
+  </div>
+</div>
 ## 5. Model final
 
 ## 6. Model Card
@@ -1522,6 +1668,8 @@ El model que programarem ha de ser de l'estil mini-batch gradient descent, i a m
 
 ## 8. Referències
 
-<a name="bib1"></a> [SKL25]: Scikit-learn developers. (n.d.). SVC — scikit-learn 1.7.2 documentation. Recuperat el 21 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
+<a name="bib1"></a> [SKL25svc]: Scikit-learn developers. (s.f.). SVC — scikit-learn 1.7.2 documentation. Recuperat el 21 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
 
 <a name="bib2"></a> [XGB25]: XGBoost developers. (s.f.). XGBoost Parameters. Recuperat el 21 de desembre de 2025, de [https://xgboost.readthedocs.io/en/stable/parameter.html](https://xgboost.readthedocs.io/en/stable/parameter.html)
+
+<a name="bib3"></a> [SKL25log]: scikit-learn Developers. (s. f.). LogisticRegression — scikit-learn 1.8.0 documentation. Scikit-learn. Recuperat el 23 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html)
