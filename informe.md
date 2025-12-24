@@ -379,22 +379,22 @@ a[href^="#bib"]:hover {
   - [4.4 Model EBM](#44-model-ebm)
     - [4.4.1 Preprocessament de les dades](#441-preprocessament-de-les-dades)
     - [4.4.2 Ajustament del model](#442-ajustament-del-model)
-- [5. Selecció del model final](#5-selecció-del-model-final)
+  - [4.5 Selecció del model final](#45-selecció-del-model-final)
 - [6. Model Card](#6-model-card)
-  - [6.1 Informació del model](#61-informació-del-model)
-  - [6.2 Hiperparàmetres](#62-hiperparàmetres)
-  - [6.3 Dades](#63-dades)
-  - [6.4 Validació](#64-validació)
-  - [6.5 Advertències i recomanacions](#65-advertències-i-recomanacions)
-  - [6.6 Limitacions](#66-limitacions)
-- [7. Conclusions](#7-conclusions)
+  - [7. Conclusions](#7-conclusions)
 - [8. Referències](#8-referències)
 
 <div class="page-break"></div>
 
 ## 1. Introducció
 
+En aquest informe es detalla el procés seguit per desenvolupar un model predictiu capaç d'identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard (TRS). El document està estructurat en diverses seccions que cobreixen des de l'anàlisi exploratori descriptiu de les dades fins a l'ajustament i selecció del model final, incloent-hi la generació d'una Model Card per al model seleccionat. S'ha explorat amb detall el conjunt de dades proporcionat, identificant característiques rellevants i possibles problemes com valors perduts o *outliers*. Posteriorment, s'han ajustat diversos models predictius utilitzant diferents tècniques d'aprenentatge automàtic, avaluant-ne el rendiment mitjançant mètriques específiques per a problemes de classificació desbalancejada. Finalment, es presenta la Model Card del model seleccionat, que resumeix les seves característiques principals i el seu rendiment.
+
 ## 2. Informació del problema
+
+Les dades surten de un projecte d'Intel·ligència Artificial Aplicada (IAA) de la UPC, que té com a objectiu desenvolupar eines de suport a la decisió clínica per a la gestió de pacients amb esquizofrènia. En concret, el problema plantejat és la predicció de la resistència al tractament antipsicòtic estàndard (TRS) en pacients amb esquizofrènia, utilitzant un conjunt de dades que inclou variables clíniques, demogràfiques i biològiques. ...
+
+<div class="page-break"></div>
 
 ## 3. Anàlisi exploratori descriptiu
 
@@ -1697,9 +1697,13 @@ Per interpretabilitat, mirem quins són els pesos més importants del model:
   </div>
 </div>
 
+Podem observar que les característiques amb els pesos més alts en valor absolut són `Duration_Untreated_Psychosis`, `Polygenic_Risk_Score`, i `Ki_whole_striatum`. Aquestes característiques tenen una influència significativa en la predicció de la resistència al tractament, ja que els seus pesos indiquen com canvia la probabilitat de ser TRS quan aquestes variables augmenten. Per exemple, un pes positiu alt per `Duration_Untreated_Psychosis` suggereix que a mesura que augmenta la durada del tractament no tractat, també augmenta la probabilitat de ser resistent al tractament. Aquesta informació pot ser útil per als professionals mèdics per comprendre millor els factors que contribueixen a la resistència al tractament i per prendre decisions clíniques informades.
+
 ### 4.4 Model EBM
 
 Les Explainable Boosting Machines (EBM) són un tipus de model d'aprenentatge automàtic que combina la potència dels models de boosting amb la interpretabilitat dels models additius generalitzats. Aquestes màquines estan dissenyades per ser interpretables, permetent als usuaris comprendre com cada característica contribueix a les prediccions del model. Són molt fàcils d'entrenar, ja que no requereixen gaire ajustament d'hiperparàmetres i poden manejar dades amb característiques mixtes (numèriques i categòriques) sense necessitat de preprocessament extensiu. [[EMB25]](#bib4)
+
+Aquest model fa servir el bagging, que és una tècnica d'ensamblatge que millora la precisió i la robustesa del model mitjançant la combinació de múltiples models base entrenats en diferents subconjunts de dades. En el cas de les EBM, el bagging ajuda a reduir la variància i a prevenir l'overfitting, millorant així la capacitat de generalització del model.
 
 Hem entrenat un model EBM utilitzant la llibreria `interpret` de Python, que proporciona una implementació eficient i fàcil d'utilitzar d'aquest tipus de models. El model s'ha ajustat utilitzant les mateixes dades preprocesades que els altres models.
 
@@ -1719,66 +1723,88 @@ Partició de les dades:
 #### 4.4.2 Ajustament del model
 
 Hem entrenat el model EBM amb els paràmetres per defecte proporcionats per la llibreria `interpret`. Els resultats han estat molt dolents degut al desbalanceig de classes. Per tant, farem servir el paràmetre `sample_weight` per donar més pes a la classe minoritària (TRS) durant l'entrenament. Assignarem un pes proporcional a la inversa de la freqüència de cada classe en el conjunt d'entrenament. Això ajudarà el model a prestar més atenció als exemples de la classe minoritària i millorar la seva capacitat per identificar pacients amb resistència al tractament.
+Per tal d'entrenar el model i com que EBM és un model pesat d'entrenar, fixem certs paràmetres per defecte.
 
-Per tal de refinar el model, explorarem diferents valors pels seguents paràmetres:
+- `max_bins=64`: Limita el nombre de bins utilitzats per a les variables numèriques, ajudant a reduir la complexitat del model i prevenir l'overfitting. Un bin és un interval en què es divideixen les dades numèriques per a la seva representació.
+- `inner_bags=0`: Defineix el nombre de cicles de bagging interns. En aquest cas, s'ha establert a 0 per simplificar el model i reduir el temps d'entrenament.
+- `outer_bags=12`: Defineix el nombre de cicles de bagging externs. Aquest valor ajuda a millorar la robustesa del model mitjançant la combinació de múltiples models base.
+- `reg_alpha=0.1`: Paràmetre de regularització L1 que controla la complexitat del model, ajudant a prevenir l'overfitting.
+- `reg_lambda=0.1`: Paràmetre de regularització L2 que també ajuda a mantenir els pesos del model petits i evitar l'overfitting.
+- `early_stopping_rounds=20`: Permet aturar l'entrenament anticipadament si no hi ha millora en la pèrdua durant 20 rondes consecutives, ajudant a prevenir l'overfitting i reduir el temps d'entrenament.
 
-Aquí tens la taula explicativa amb els hiperparàmetres de la graella (grid) per al model EBM, sense les referències numèriques:
+Hem realitzat una cerca d'hiperparàmetres utilitzant `GridSearchCV` per optimitzar el rendiment del model EBM. Hem jugat amb els següents hiperparàmetres:
 
-<div class="table-container">
-  <table>
-    <thead>
-      <tr>
-        <th style="text-align:left;">Hiperparàmetre</th>
-        <th style="text-align:left;">Valors provats</th>
-        <th style="text-align:left;">Significat</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td style="text-align:left;"><b><code>outer_bags</code></b></td>
-        <td style="text-align:left;"></td>
-        <td style="text-align:left;">Nombre de cicles de bagging extern: controla l'estabilitat del model reduint la variància de les prediccions; valors més alts ajuden a mitigar l'efecte del soroll i els falsos positius.</td>
-      </tr>
-      <tr>
-        <td style="text-align:left;"><b><code>interactions</code></b></td>
-        <td style="text-align:left;"></td>[
-        <td style="text-align:left;">Termes d'interacció: nombre de parelles de variables que el model detecta automàticament. Un valor de 0 crea un model additiu pur (GAM), mentre que 8 permet capturar relacions clau entre variables.</td>
-      </tr>
-      <tr>
-        <td style="text-align:left;"><b><code>max_bins</code></b></td>
-        <td style="text-align:left;"></td>
-        <td style="text-align:left;">Nombre màxim de bins: defineix la resolució de les variables numèriques. Reduir-lo simplifica el model i ajuda a evitar el sobreajust (overfitting) en patrons de dades sorollosos.</td>
-      </tr>
-      <tr>
-        <td style="text-align:left;"><b><code>learning_rate</code></b></td>
-        <td style="text-align:left;">[0.01, 0.02]</td>
-        <td style="text-align:left;">Taxa d'aprenentatge: controla la magnitud de l'actualització de les funcions de cada variable en cada pas de boosting; valors baixos asseguren una convergència més estable i controlada.</td>
-      </tr>
-    </tbody>
-  </table>
-  <div class="table-caption">Taula 11: Espai de cerca d'hiperparàmetres per a l'optimització de l'Explainable Boosting Machine (EBM).</div>
-</div>
+- `learning_rate`: Taxa d'aprenentatge que controla la velocitat amb què el model actualitza les funcions de cada variable. Valors provats: ``[0.01, 0.02, 0.05]``
+- `max_leaves`: Nombre màxim de fulles per a cada arbre base utilitzat en el model. Valors provats: ``[3,5,7]``
 
 El millor model obtingut té els següents hiperparàmetres:
 
 ```bash
-{'interactions': 0, 'learning_rate': 0.02, 'max_bins': 64, 'outer_bags': 24}```
+{'learning_rate': 0.05, 'max_leaves': 3}
 ```
 
-Per tant, el model EBM final utilitza **0 termes d'interacció**, indicant que un model additiu pur (GAM) és suficient per capturar les relacions entre les característiques i la variable objectiu en aquest cas. La **taxa d'aprenentatge de 0.02** permet una actualització gradual de les funcions de cada variable, ajudant a evitar l'overfitting. Amb **64 bins màxims**, el model manté una bona resolució per a les variables numèriques sense sobreajustar-se als patrons sorollosos. Finalment, amb **24 cicles de bagging externs**, el model aconsegueix una estabilitat millorada en les prediccions, reduint la variància i millorant la generalització. [[EMB25]](#bib4)
+Aquest model utilitza una **taxa d'aprenentatge de 0.05**, que permet al model actualitzar les funcions de manera moderada, equilibrant la velocitat d'aprenentatge i la prevenció de l'overfitting. Amb un **nombre màxim de fulles de 3** per a cada arbre base, el model es manté relativament simple, ajudant a evitar l'overfitting i millorant la capacitat de generalització a dades no vistes. A més, tenint en compte els paràmetres establerts prèviament, el model EBM està ben configurat per manejar el desbalanceig de classes i oferir un rendiment robust en la classificació de pacients amb resistència al tractament [[EMB25]](#bib4)
 
 Les mètriques d'avaluació del model EBM ajustat al conjunt de prova són les següents:
 
-              precision    recall  f1-score   support
-
-           0       0.76      0.55      0.64      1232
-           1       0.39      0.63      0.48       568
-
-    accuracy                           0.58      1800
-   macro avg       0.58      0.59      0.56      1800
-weighted avg       0.65      0.58      0.59      1800
-
-El model EBM ajustat presenta una **accuracy** del 58% i un F1-score ponderat del 59%, indicant un rendiment global moderat. Per a la classe **TRS (1)**, el model assoleix una precisió del 39% i un **recall del 63%**, millorant la capacitat d’identificar pacients resistents al tractament en comparació amb els models anteriors. En la classe **no TRS (0)**, la precisió del **76%** i el recall del **55%** mostren una bona capacitat per classificar correctament la majoria de casos negatius. Aquest patró reforça la necessitat de buscar un equilibri entre la detecció de la classe minoritària i el manteniment d’una precisió acceptable en el context clínic.
+<div class="media-row" style="display: flex; align-items: center; margin: 1rem 0; gap: 15px;">
+    <div style="flex: 0 0 40%; max-width: 320px;">
+        <div class="table-container" style="margin: 0; padding: 0;">
+            <table style="border-collapse: collapse; width: 100%; line-height: 1.2; font-size: 7.5pt;">
+                <thead>
+                    <tr style="background-color: #e0e0e0;">
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: left;">Classe</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Prec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Rec.</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">F1</th>
+                        <th style="padding: 4px 5px; border: 1px solid #888; text-align: center;">Supp.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.76</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.66</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1232</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.40</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.47</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">568</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+                        <td colspan="3" style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr style="background-color: #f5f5f5;">
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.58</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.57</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.64</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.60</td>
+                        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">1800</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula X: Resultats de classificació per al model EBM ajustat.</div>
+        </div>
+    </div>
+    <div class="media-text" style="flex: 1; font-size: 8.5pt; line-height: 1.4;">
+        <p style="margin: 0 0 0.5rem 0;">El model <b>EBM</b> ajustat presenta una <b>accuracy</b> del 59% i un F1-score ponderat del 60%, mantenint un rendiment global moderat però coherent amb el desbalanceig de classes.</p>
+        <p style="margin: 0 0 0.5rem 0;">Per a la classe <b>TRS (1)</b>, el model assoleix una precisió del 40% i un <b>recall del 59%</b>, cosa que indica una millora significativa en la capacitat d’identificar pacients resistents al tractament en comparació amb els models anteriors.</p>
+        <p style="margin: 0;">En la classe <b>no TRS (0)</b>, la precisió del <b>76%</b> i el recall del <b>58%</b> mostren una bona capacitat per classificar correctament la majoria de casos negatius, consolidant la robustesa del model davant el soroll de les dades clíniques.</p>
+    </div>
+</div>
 
 Pel que fa a la corba ROC i la matriu de confusió del model EBM, les podem veure a continuació:
 
@@ -1793,19 +1819,28 @@ Pel que fa a la corba ROC i la matriu de confusió del model EBM, les podem veur
   </div>
 </div>
 
-Podem veure que aquest model és millor que els anteriors en termes de precisió i recall per a la classe TRS, ja que identifica correctament **357 casos positius** (True Positives) amb un nombre de falsos positius (552) més baix que els altres models. Això indica que el model és capaç de detectar millor els pacients amb resistència al tractament, tot i que encara hi ha marge de millora. L'**AUC de 0.62** indica que el model té una capacitat de discriminació moderada, igualant respecte al model de regressió logística. La corba ROC mostra una millora en la separació de les classes, tot i que encara no és òptima. Per comprovar si hi ha sobreajustament, comparem les mètriques roc_auc per al conjunt de validació i el conjunt de prova:
+Podem veure que aquest model és millor que els anteriors en termes de precisió i recall per a la classe TRS, ja que identifica correctament **337 casos positius** (True Positives) amb un nombre de falsos positius (514) més baix que els altres models. Això indica que el model és capaç de detectar molt millor els pacients amb resistència al tractament, tot i que encara hi ha cert marge de millora. L'**AUC de 0.62** indica que el model té una capacitat de discriminació moderada, igualant respecte al model de regressió logística. La corba ROC mostra una millora en la separació de les classes, tot i que encara no és òptima. Per comprovar si hi ha sobreajustament, comparem les mètriques roc_auc per al conjunt de validació i el conjunt de prova:
 
 ```bash
-AUC Train: 0.6608
-AUC Test: 0.6235
-Diferència: 0.0373
+AUC Train: 0.6950
+AUC Test: 0.6232
+Diferència: 0.0719
 ```
 
-La diferència d'AUC entre el conjunt d'entrenament i el conjunt de prova és de només 0.0373, la qual cosa indica que el model no pateix d'overfitting significatiu. Això suggereix que el model EBM generalitza bé als dades no vistes, mantenint un rendiment consistent entre els conjunts d'entrenament i prova.
+La diferència d'AUC entre el conjunt d'entrenament i el conjunt de prova és de només 0.0716, la qual cosa indica que el model pateix poc d'overfitting i generalitza bé a dades no vistes. Això és un bon indicador de la robustesa del model EBM en aquest context.
 
-## 5. Selecció del model final
+Els models EBM ofereixen una interpretabilitat significativa, ja que permeten visualitzar l'impacte de cada característica en les prediccions del model. A continuació, es mostren les gràfiques d'importància de les característiques:
 
-Com que estem en un context mèdic, on és crucial identificar correctament els pacients amb resistència al tractament (TRS), la mètrica més important per a nosaltres és el recall de la classe positiva (TRS). Això es deu al fet que volem minimitzar els falsos negatius, és a dir, els casos en què el model no identifica un pacient com a TRS quan realment ho és. Identificar aquests pacients és fonamental per garantir que rebin el tractament adequat i evitar complicacions mèdiques greus. Recollim en una taula les mètriques de recall per a la classe TRS dels 4 models:
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/28.png" alt="Importància de les característiques del model EBM">
+    <div class="caption">Figura 28: Importància de les característiques del model EBM</div>
+  </div>
+</div>
+
+Podem observar que les característiques més importants per al model EBM són, `Initial_response`, `Duration_untreated_psychosis` i `Polygenic_risk_score`, que coincideixen amb les característiques més rellevants identificades al model de regressió logística. Això reforça la confiança en el model, ja que les característiques clau per a la predicció de la resistència al tractament són consistents entre diferents tipus de models.
+
+### 4.5 Selecció del model final
 
 <div class="table-container">
   <table>
@@ -1828,31 +1863,82 @@ Com que estem en un context mèdic, on és crucial identificar correctament els 
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>Regressió Logística</b></td>
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.49</td>
       </tr>
-      <tr style="background-color: #f5f5f5;">
+      <tr style="background-color: #ffff00;">
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>EBM</b></td>
-        <td style="padding: 4px 5px; border: 1px solid #ffff00; text-align: center;">0.63</td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
       </tr>
     </tbody>
   </table>
   <div class="table-caption">Taula 12: Mètrica de recall per a la classe TRS dels diferents models.</div>
 
-És evident que el model EBM és el que presenta el millor recall per a la classe TRS, amb un valor de 0.63. Això significa que el model és capaç d'identificar correctament el 63% dels pacients amb resistència al tractament, superant significativament els altres models. Per tant, donada la importància de minimitzar els falsos negatius en aquest context mèdic, seleccionem l'EBM com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
+És evident que el model EBM és el que presenta el millor recall per a la classe TRS, amb un valor de 0.59. Això significa que el model és capaç d'identificar correctament el 59% dels pacients amb resistència al tractament, la qual cosa és crucial en aquest context mèdic. Per tant, basant-nos en aquesta mètrica clau, seleccionem el model EBM com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
 
 ## 6. Model Card
 
-### 6.1 Informació del model
+Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El model card es genera a un format HTML, però que passat a Markdown queda així:
 
-### 6.2 Hiperparàmetres
+1. **Detalls del Model**
+    - **Visió General:** Model predictiu basat en *Explainable Boosting Machine* (EBM) dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. Aquest model serveix com a eina de suport a la decisió clínica per prioritzar intervencions personalitzades.
+    - **Versió:** v1.0
+    - **Propietaris:** Ferran Òdena Bernadí (ferran.odena@estudiantat.upc.edu)
+    - **Referències:**
+        - Dades del projecte IAA 2025/26
+        - [Documentació EBM](https://interpret.ml/docs/ebm.html) [[EBM25]](#bib4)
 
-### 6.3 Dades
+2. **Paràmetres del Model**
+    - **Arquitectura:** Explainable Boosting Machine (EBM)
+    - **Format d'Entrada (Hiperparàmetres Clau):**
+        - Learning Rate = 0.05
+        - Max Leaves = 3
+        - Interaccions = 10
+        - Outer Bags = 8
+        - Inner Bags = 0
 
-### 6.4 Validació
+3. **Consideracions**
+    - **Casos d'Ús:**
+        - *Recomanació:* Utilitzar com a eina de cribratge (*screening*) per identificar pacients amb alt risc.
+        - *Advertència:* Els resultats positius han de ser sempre validats per un especialista degut a la baixa precisió (40%).
+        - *Advertència:* No utilitzar per a la presa de decisions automàtica sense supervisió humana.
+    - **Limitacions:**
+        - *Precisió Baixa:* El model genera un nombre elevat de falsos positius (pacients etiquetats com a TRS que no ho són).
+        - *Biaix de Dades:* El model s'ha entrenat amb dades desbalancejades, la qual cosa pot afectar la seva fiabilitat en subgrups menys representats.
+        - *Generalització:* El rendiment pot variar si s'aplica a poblacions amb característiques demogràfiques molt diferents a les de l'entrenament.
 
-### 6.5 Advertències i recomanacions
+4. **Conjunt de Dades (Datasets)**
+    - **TRS Dataset (Clinical + Genetic):**
+        - Entrenat amb un conjunt de dades de 7200 mostres i 26 variables.
+        - Inclou dades demogràfiques (edat, sexe), clíniques (IMC, durada psicosi), biomarcadors i marcadors genètics.
+        - *Nota:* Aquestes dades es consideren sensibles (informació mèdica).
 
-### 6.6 Limitacions
+5. **Anàlisi Quantitativa**
+    - **Accuracy:** 0.59 — Precisió global al conjunt de prova (Test Set).
+    - **Recall (TRS):** 0.59 — Capacitat del model per detectar correctament els pacients resistents (Sensibilitat).
+    - **Precision (TRS):** 0.40 — Proporció de prediccions "TRS" que són realment correctes (Valor Predictiu Positiu).
+    - **F1-Score (TRS):** 0.47 — Mitjana harmònica entre precisió i recall per a la classe minoritària.
 
-## 7. Conclusions
+6. **Gràfics d'Avaluació**
+    - *Matriu de Confusió* (Figura 26)
+    - *Corba ROC* (Figura 27)
+
+<div style="page-break-after: always;"></div>
+
+### 7. Conclusions
+
+En aquest treball he desenvolupat models d'Intel·ligència Artificial per predir quins pacients amb esquizofrènia presentaran resistència al tractament habitual (TRS). He utilitzat un conjunt de dades que inclou informació clínica, genètica i de neuroimatge per abordar aquest repte mèdic.
+
+Les principals conclusions del meu estudi són:
+
+1. **Dificultat de predicció i factors clau:** He comprovat que predir la resistència al tractament és complex, però factible. L'anàlisi de les dades m'ha permès confirmar que variables com la història familiar o certs marcadors genètics són fonamentals per identificar aquests pacients, validant que hi ha patrons biològics detectables.
+
+2. **Priorització de la sensibilitat clínica:** Els models que he entrenat tenen una precisió global al voltant del 60%. Conscient de la importància mèdica de no deixar cap pacient sense el tractament adequat, he configurat els models prioritzant el *Recall* (sensibilitat). Això m'assegura detectar la majoria de casos resistents, assumint el cost de generar algunes falses alarmes (falsos positius).
+
+3. **L'aposta pel model EBM:** He seleccionat l'*Explainable Boosting Machine* (EBM) com el millor model final. Aquesta decisió es basa no només en el seu bon rendiment detectant casos positius (59%), sinó especialment en la seva transparència. A diferència d'altres models "caixa negra", l'EBM em permet explicar el perqupe de cada predicció, un requisit essencial per a la seva aplicació en un entorn real.
+
+4. **Eina de suport, no de decisió final:** Donada la precisió moderada obtinguda, concloc que aquesta eina s'ha de considerar un sistema de suport al cribratge. La seva funció ideal és alertar els especialistes sobre pacients amb alt risc de resistència perquè puguin avaluar-los amb més profunditat, però no hauria de substituir mai el judici clínic definitiu.
+
+En resum, el meu treball demostra el potencial de l'aprenentatge automàtic per millorar la personalització del tractament en psiquiatria, tot i que posa de manifest la necessitat de continuar recollint dades de qualitat per perfeccionar aquestes eines predictives.
+
+<div class="page-break"></div>
 
 ## 8. Referències
 

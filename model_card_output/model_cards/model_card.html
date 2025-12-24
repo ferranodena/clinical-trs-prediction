@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html lang="en">
+<head>
+<style>
+  h1 {text-align: center;}
+  .row {
+    display: flex;
+  }
+  .col {
+    flex: 1;
+    align-items: center; 
+    justify-content: center;
+  }
+  .card {
+    padding: 1em;
+    border: 1px solid #DADCE0;
+    margin: 10px;
+  }
+  .card .card {
+    padding: 0.5em;
+    padding-bottom: 0em;
+    border: none;
+  }
+  .img-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    text-align: center;
+  }
+  .img-item {
+    flex: 1;
+  }
+  .center {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+  table, th, td { border: 1px solid black; }
+  th, td { border: 1px solid #CCC; height: 30px; }
+  caption { font-weight: bold; }
+</style>
+<title>
+  Model Card for EBM per Predicció de Resistència al Tractament (TRS)
+</title>
+</head>
+<body>
+  <h1>
+    Model Card for EBM per Predicció de Resistència al Tractament (TRS)
+  </h1>
+    <div class="row">
+      <div class="col card">
+        <h2>Model Details</h2>
+          <h3>Overview</h3>
+              Model predictiu basat en Explainable Boosting Machine (EBM) dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. Aquest model serveix com a eina de suport a la decisió clínica per prioritzar intervencions personalitzades.
+          <h3>Version</h3>
+              
+  
+    <div>name: v1.0</div>
+
+              
+  
+
+              
+  
+
+          
+          
+          <h3>Owners</h3>
+            
+              Ferran Òdena Bernadí, ferran.odena@estudiantat.upc.edu
+            
+          
+          
+          
+            <h3>References</h3>
+              <ul>
+              
+                <li><a href="Dades del projecte IAA 2025/26">Dades del projecte IAA 2025/26</a></li>
+              
+                <li><a href="https://interpret.ml/ (EBM documentation)">https://interpret.ml/ (EBM documentation)</a></li>
+              
+              </ul>
+          
+          
+        </div>
+      
+        <div class="col card">
+          <h2>Model Parameters</h2>
+            
+              <h3>Model Architecture</h3>
+                <div style="white-space:pre-wrap;">Explainable Boosting Machine (EBM)</div>
+            
+              <h3>Input Format</h3>
+                <div style="white-space:pre-wrap;">Hiperparàmetres Clau: Learning Rate = 0.05, Max Leaves = 3, Interaccions = 10, Outer Bags = 8, Inner Bags = 0.</div>
+            
+      
+      
+      <div class="col card">
+        <h2>Considerations</h2>
+          
+          
+            <h3>Use Cases</h3>
+              
+  
+  <ul>
+  
+    <li>RECOMANACIÓ: Utilitzar com a eina de cribratge (screening) per identificar pacients amb alt risc.</li>
+  
+    <li>ADVERTÈNCIA: Els resultats positius han de ser sempre validats per un especialista degut a la baixa precisió (40%).</li>
+  
+    <li>ADVERTÈNCIA: No utilitzar per a la presa de decisions automàtica sense supervisió humana.</li>
+  
+  </ul>
+
+          
+          
+            <h3>Limitations</h3>
+              
+  
+  <ul>
+  
+    <li>PRECISIÓ BAIXA: El model genera un nombre elevat de falsos positius (pacients etiquetats com a TRS que no ho són).</li>
+  
+    <li>BIAIX DE DADES: El model s&#39;ha entrenat amb dades desbalancejades, la qual cosa pot afectar la seva fiabilitat en subgrups menys representats.</li>
+  
+    <li>GENERALITZACIÓ: El rendiment pot variar si s&#39;aplica a poblacions amb característiques demogràfiques molt diferents a les de l&#39;entrenament.</li>
+  
+  </ul>
+
+          
+          
+          
+          
+      </div>
+      
+    </div>
+    
+      
+  <div class="col card">
+    <h2>Datasets</h2>
+    
+      <div class="row">
+        <div class="col card">
+          <h3>TRS Dataset (Clinical + Genetic)</h3>
+            <p>Entrenat amb un conjunt de dades de 7200 mostres i 26 variables. Inclou dades demogràfiques (edat, sexe), clíniques (IMC, durada psicosi), biomarcadors i marcadors genètics. Nota: Aquestes dades es consideren sensibles (informació mèdica).</p>
+            
+            
+            
+        </div>
+      </div>
+    
+  </div>
+
+    
+    
+      
+<div class="col card">
+  <h2>Quantitative Analysis</h2>
+  
+    
+      
+<div class="col card">
+  <h3>Accuracy - 0.59 </h3>
+  
+  
+  <div>
+    <b> Description: </b>
+    Precisió global al conjunt de prova (Test Set). 
+  </div>
+  
+  
+  
+</div>
+
+    
+      
+<div class="col card">
+  <h3>Recall (TRS) - 0.59 </h3>
+  
+  
+  <div>
+    <b> Description: </b>
+    Capacitat del model per detectar correctament els pacients resistents (Sensibilitat). 
+  </div>
+  
+  
+  
+</div>
+
+    
+      
+<div class="col card">
+  <h3>Precision (TRS) - 0.40 </h3>
+  
+  
+  <div>
+    <b> Description: </b>
+    Proporció de prediccions &#34;TRS&#34; que són realment correctes (Valor Predictiu Positiu). 
+  </div>
+  
+  
+  
+</div>
+
+    
+      
+<div class="col card">
+  <h3>F1-Score (TRS) - 0.47 </h3>
+  
+  
+  <div>
+    <b> Description: </b>
+    Mitjana harmònica entre precisió i recall per a la classe minoritària. 
+  </div>
+  
+  
+  
+</div>
+
+    
+  
+  
+    
+  <div class="row">
+    <div class="col">
+      
+      
+  <div class="img-container">
+  
+  
+    <div class="img-item">
+    
+       <img src='data:image/png;base64,./images/26.png' alt='Confusion Matrix' />
+    
+    </div>
+  
+    <div class="img-item">
+    
+       <img src='data:image/png;base64,./images/27.png' alt='roc curve' />
+    
+    </div>
+  
+  </div>
+    
+    </div>
+  </div>
+
+  
+</div>
+
+    
+    
+    
+</body>
+</html>
