@@ -1844,6 +1844,8 @@ Els models EBM ofereixen una interpretabilitat significativa, ja que permeten vi
 
 Podem observar que les característiques més importants per al model EBM són, `Initial_response`, `Duration_untreated_psychosis` i `Polygenic_risk_score`, que coincideixen amb les característiques més rellevants identificades al model de regressió logística. Això reforça la confiança en el model, ja que les característiques clau per a la predicció de la resistència al tractament són consistents entre diferents tipus de models.
 
+Amb aquest model, provem de fer una submission al Kaggle per veure com es comporta amb dades noves. Obtenim una puntuació de  0.49856, que és menor al 0.57 que hem obtingut sobre le conjunt de prova. Això pot ser degut a que les dades del concurs són diferents a les dades de prova, i per tant el model no generalitza tan bé com creia. També pot ser degut a que el model està sobreajustat a les nostres dades d'entrenament i prova, i per tant no funciona tan bé amb dades noves. En qualsevol cas, aquesta puntuació ens indica que encara hi ha marge de millora en el model EBM.
+
 ### 4.5 Selecció del model final
 
 <div class="table-container" style="page-break-inside: avoid; margin-top: 10px;">
