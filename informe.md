@@ -381,18 +381,22 @@ a[href^="#bib"]:hover {
     - [4.4.2 Ajustament del model](#442-ajustament-del-model)
   - [4.5 Selecció del model final](#45-selecció-del-model-final)
 - [6. Model Card](#6-model-card)
-  - [7. Conclusions](#7-conclusions)
+- [7. Conclusions](#7-conclusions)
 - [8. Referències](#8-referències)
 
 <div class="page-break"></div>
 
 ## 1. Introducció
 
-En aquest informe es detalla el procés seguit per desenvolupar un model predictiu capaç d'identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard (TRS). El document està estructurat en diverses seccions que cobreixen des de l'anàlisi exploratori descriptiu de les dades fins a l'ajustament i selecció del model final, incloent-hi la generació d'una Model Card per al model seleccionat. S'ha explorat amb detall el conjunt de dades proporcionat, identificant característiques rellevants i possibles problemes com valors perduts o *outliers*. Posteriorment, s'han ajustat diversos models predictius utilitzant diferents tècniques d'aprenentatge automàtic, avaluant-ne el rendiment mitjançant mètriques específiques per a problemes de classificació desbalancejada. Finalment, es presenta la Model Card del model seleccionat, que resumeix les seves característiques principals i el seu rendiment.
+Aquest informe documenta el desenvolupament d'una solució basada en intel·ligència artificial per abordar un repte clínic significatiu: la identificació de pacients amb esquizofrènia que presenten resistència al tractament (TRS). Utilitzant un conjunt de dades clíniques i genètiques proporcionat pel projecte de l'assignatura, l'estudi s'inicia amb una fase exhaustiva d'anàlisi exploratòria per comprendre l'estructura de la informació, on s'han examinat la distribució de les variables, la presència de valors perduts i l'impacte dels outliers, a més d'abordar el desbalanceig inherent de la classe objectiu que caracteritza aquest tipus de dades mèdiques.
+
+La fase central del treball es focalitza en l'experimentació i ajustament de diversos models predictius, incloent-hi Màquines de Vectors de Suport (SVM), XGBoost, Regressió Logística personalitzada i l'Explainable Boosting Machine (EBM). Aquest procés ha estat guiat per una avaluació rigorosa que prioritza la sensibilitat (Recall) per sobre de la precisió global, amb l'objectiu mèdic de minimitzar els casos de pacients resistents no detectats. Finalment, l'informe conclou amb la selecció del model EBM com a eina final per la seva capacitat d'oferir un equilibri òptim entre rendiment predictiu i explicabilitat clínica, decisió que es formalitza mitjançant la generació i exportació de la seva corresponent Model Card per estandarditzar-ne la documentació.
 
 ## 2. Informació del problema
 
-Les dades surten de un projecte d'Intel·ligència Artificial Aplicada (IAA) de la UPC, que té com a objectiu desenvolupar eines de suport a la decisió clínica per a la gestió de pacients amb esquizofrènia. En concret, el problema plantejat és la predicció de la resistència al tractament antipsicòtic estàndard (TRS) en pacients amb esquizofrènia, utilitzant un conjunt de dades que inclou variables clíniques, demogràfiques i biològiques. ...
+Les dades contenen informació clínica i genètica de pacients diagnosticats amb esquizofrènia, amb l'objectiu de predir quins d'aquests pacients desenvoluparan resistència al tractament (TRS). La resistència al tractament es defineix com la manca de resposta adequada als tractaments antipsicòtics estàndard, i afecta aproximadament un 31.5% dels pacients amb esquizofrènia segons els estudis citats[[KHO25]](#bib0).
+
+Per tant, l'objectiu principal d'aquest projecte és desenvolupar un model predictiu capaç d'identificar amb precisió els pacients amb TRS utilitzant les dades disponibles. Aquest model ha de ser capaç de manejar el desbalanceig inherent en les dades, ja que la proporció de pacients amb TRS és significativament menor que la dels pacients sense TRS. Així mateix, es pretén que el model sigui interpretable per facilitar la seva aplicació clínica i la comprensió dels factors que contribueixen a la resistència al tractament.
 
 <div class="page-break"></div>
 
@@ -1842,12 +1846,12 @@ Podem observar que les característiques més importants per al model EBM són, 
 
 ### 4.5 Selecció del model final
 
-<div class="table-container">
-  <table>
+<div class="table-container" style="page-break-inside: avoid; margin-top: 10px;">
+  <table style="width: 100%; border-collapse: collapse;">
     <thead>
-      <tr>
-        <th style="text-align:left;">Model</th>
-        <th style="text-align:left;">Recall TRS (1)</th>
+      <tr style="background-color: #e0e0e0;">
+        <th style="text-align:left; padding: 4px 5px; border: 1px solid #aaa;">Model</th>
+        <th style="text-align:center; padding: 4px 5px; border: 1px solid #aaa;">Recall TRS (1)</th>
       </tr>
     </thead>
     <tbody>
@@ -1869,9 +1873,16 @@ Podem observar que les característiques més importants per al model EBM són, 
       </tr>
     </tbody>
   </table>
-  <div class="table-caption">Taula 12: Mètrica de recall per a la classe TRS dels diferents models.</div>
+  <div class="table-caption" style="font-size: 0.9em; margin-top: 5px; text-align: center;">Taula 12: Mètrica de recall per a la classe TRS dels diferents models.</div>
+</div>
 
 És evident que el model EBM és el que presenta el millor recall per a la classe TRS, amb un valor de 0.59. Això significa que el model és capaç d'identificar correctament el 59% dels pacients amb resistència al tractament, la qual cosa és crucial en aquest context mèdic. Per tant, basant-nos en aquesta mètrica clau, seleccionem el model EBM com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
+
+El model EBM s'adapta bé al volum de dades de 9.000 mostres, sent prou robust per no sobreajustar-se (overfitting) gràcies al seu sistema de bagging i boosting combinats. Quant als hiperparàmetres, la seva configuració permet un control precís sobre el nombre d'interaccions i la profunditat de l'aprenentatge, facilitant un ajustament que prioritzi la detecció de casos positius en un entorn on les dades estan naturalment desbalancejades.
+
+La principal capacitat d'aquest model és la seva altíssima sensibilitat o recall, que en aquest estudi hem aconseguit situar en un 0.59. Això significa que el model és especialment bo identificant pacients que realment pateixen resistència al tractament, evitant que passin desapercebuts pel sistema sanitari. La seva arquitectura també el fa molt resistent a la influència de variables sorolloses, gràcies a la capacitat d'ignorar característiques que no aporten guany predictiu real.
+
+D'altra banda, el model presenta limitacions clares en l'àmbit de la precisió, que es manté al voltant del 0.40. Això implica que genera un volum considerable de falsos positius, etiquetant com a resistents alguns pacients que podrien respondre bé al tractament estàndard. Aquesta limitació prové principalment de l'asimetria i el soroll inherent a les dades clíniques i genètiques. Per tant, el model no s'ha d'utilitzar mai com una eina de diagnòstic automàtic, sinó com un sistema de cribratge que alerte l'especialista, qui sempre haurà d'exercir la validació clínica final per evitar tractaments innecessaris.
 
 ## 6. Model Card
 
@@ -1879,15 +1890,14 @@ Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El m
 
 1. **Detalls del Model**
     - **Visió General:** Model predictiu basat en *Explainable Boosting Machine* (EBM) dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. Aquest model serveix com a eina de suport a la decisió clínica per prioritzar intervencions personalitzades.
-    - **Versió:** v1.0
-    - **Propietaris:** Ferran Òdena Bernadí (ferran.odena@estudiantat.upc.edu)
+    - **Propietaris:** Ferran Òdena Bernadí
     - **Referències:**
         - Dades del projecte IAA 2025/26
         - [Documentació EBM](https://interpret.ml/docs/ebm.html) [[EBM25]](#bib4)
 
 2. **Paràmetres del Model**
     - **Arquitectura:** Explainable Boosting Machine (EBM)
-    - **Format d'Entrada (Hiperparàmetres Clau):**
+    - **Hiperparàmetres:**
         - Learning Rate = 0.05
         - Max Leaves = 3
         - Interaccions = 10
@@ -1896,7 +1906,7 @@ Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El m
 
 3. **Consideracions**
     - **Casos d'Ús:**
-        - *Recomanació:* Utilitzar com a eina de cribratge (*screening*) per identificar pacients amb alt risc.
+        - *Recomanació:* Utilitzar com a eina de cribratge per identificar pacients amb alt risc.
         - *Advertència:* Els resultats positius han de ser sempre validats per un especialista degut a la baixa precisió (40%).
         - *Advertència:* No utilitzar per a la presa de decisions automàtica sense supervisió humana.
     - **Limitacions:**
@@ -1908,7 +1918,8 @@ Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El m
     - **TRS Dataset (Clinical + Genetic):**
         - Entrenat amb un conjunt de dades de 7200 mostres i 26 variables.
         - Inclou dades demogràfiques (edat, sexe), clíniques (IMC, durada psicosi), biomarcadors i marcadors genètics.
-        - *Nota:* Aquestes dades es consideren sensibles (informació mèdica).
+        - La variable objectiu és `TRS`, on 1 indica resistència al tractament i 0 indica resposta positiva.
+        - El conjunt de dades està desbalancejat, amb aproximadament un 30% de pacients TRS.
 
 5. **Anàlisi Quantitativa**
     - **Accuracy:** 0.59 — Precisió global al conjunt de prova (Test Set).
@@ -1920,27 +1931,21 @@ Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El m
     - *Matriu de Confusió* (Figura 26)
     - *Corba ROC* (Figura 27)
 
-<div style="page-break-after: always;"></div>
+<div class="page-break"></div>
 
-### 7. Conclusions
+## 7. Conclusions
 
-En aquest treball he desenvolupat models d'Intel·ligència Artificial per predir quins pacients amb esquizofrènia presentaran resistència al tractament habitual (TRS). He utilitzat un conjunt de dades que inclou informació clínica, genètica i de neuroimatge per abordar aquest repte mèdic.
+Aquest treball m'ha permès confirmar que, tot i la gran complexitat que suposa predir la resistència al tractament en l'esquizofrènia, és possible identificar patrons biològics útils combinant dades familiars i genètiques. Al llarg del projecte, he pogut comprovar que variables com els antecedents de salut a la família o determinats marcadors genètics són peces clau per detectar els pacients amb més risc, validant així que la tecnologia pot ajudar a anticipar-se a les necessitats de cada persona.
 
-Les principals conclusions del meu estudi són:
+Pel que fa al rendiment del model, m'he centrat a prioritzar la capacitat de detecció per sobre de l'encert general, ja que en un context mèdic és molt més greu no detectar un pacient amb necessitats especials que donar una falsa alarma. Per aquest motiu, he escollit el model EBM, que no només ha demostrat ser el més eficaç per trobar els casos positius, sinó que també destaca per ser totalment transparent. A diferència d'altres sistemes opacs, aquest model permet explicar quins factors han portat a cada predicció, una característica fonamental perquè els professionals sanitaris puguin confiar-hi en la seva pràctica diària.
 
-1. **Dificultat de predicció i factors clau:** He comprovat que predir la resistència al tractament és complex, però factible. L'anàlisi de les dades m'ha permès confirmar que variables com la història familiar o certs marcadors genètics són fonamentals per identificar aquests pacients, validant que hi ha patrons biològics detectables.
-
-2. **Priorització de la sensibilitat clínica:** Els models que he entrenat tenen una precisió global al voltant del 60%. Conscient de la importància mèdica de no deixar cap pacient sense el tractament adequat, he configurat els models prioritzant el *Recall* (sensibilitat). Això m'assegura detectar la majoria de casos resistents, assumint el cost de generar algunes falses alarmes (falsos positius).
-
-3. **L'aposta pel model EBM:** He seleccionat l'*Explainable Boosting Machine* (EBM) com el millor model final. Aquesta decisió es basa no només en el seu bon rendiment detectant casos positius (59%), sinó especialment en la seva transparència. A diferència d'altres models "caixa negra", l'EBM em permet explicar el perqupe de cada predicció, un requisit essencial per a la seva aplicació en un entorn real.
-
-4. **Eina de suport, no de decisió final:** Donada la precisió moderada obtinguda, concloc que aquesta eina s'ha de considerar un sistema de suport al cribratge. La seva funció ideal és alertar els especialistes sobre pacients amb alt risc de resistència perquè puguin avaluar-los amb més profunditat, però no hauria de substituir mai el judici clínic definitiu.
-
-En resum, el meu treball demostra el potencial de l'aprenentatge automàtic per millorar la personalització del tractament en psiquiatria, tot i que posa de manifest la necessitat de continuar recollint dades de qualitat per perfeccionar aquestes eines predictives.
+Finalment, cal entendre aquesta eina com un mecanisme de suport i no com una solució definitiva, ja que la seva funció principal és servir de filtre per alertar els especialistes sobre els casos més urgents. En definitiva, l'estudi demostra que l'aprenentatge automàtic té un potencial enorme per personalitzar els tractaments psiquiàtrics, tot i que encara queda camí per recórrer en la recollida de dades de qualitat que ens permetin seguir perfeccionant aquestes eines en el futur.
 
 <div class="page-break"></div>
 
 ## 8. Referències
+
+<a name="bib0"></a> [KHO25]:  Khoodoruth, M. A. S., et al. (2025). Peripheral inflammatory and metabolic markers as potential biomarkers for treatment-resistant schizophrenia. Psychiatry Research. Recuperat el 15 de desembre de 2025, de [https://www.sciencedirect.com/science/article/pii/S0165178124005924?ref=pdf_download&fr=RR-2&rr=9b379e424c4b204f](https://www.sciencedirect.com/science/article/pii/S0165178124005924?ref=pdf_download&fr=RR-2&rr=9b379e424c4b204f)
 
 <a name="bib1"></a> [SKL25svc]: Scikit-learn developers. (s.f.). SVC — scikit-learn 1.7.2 documentation. Recuperat el 21 de desembre de 2025, de [https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
 
