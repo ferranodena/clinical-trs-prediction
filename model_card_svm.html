@@ -56,22 +56,22 @@
   caption { font-weight: bold; }
 </style>
 <title>
-  Model Card for EBM per Predicció de Resistència al Tractament (TRS)
+  Model Card for SVM RBF per Predicció de Resistència al Tractament (TRS)
 </title>
 </head>
 <body>
   <h1>
-    Model Card for EBM per Predicció de Resistència al Tractament (TRS)
+    Model Card for SVM RBF per Predicció de Resistència al Tractament (TRS)
   </h1>
     <div class="row">
       <div class="col card">
         <h2>Model Details</h2>
           <h3>Overview</h3>
-              Model predictiu basat en Explainable Boosting Machine (EBM) dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. Aquest model serveix com a eina de suport a la decisió clínica per prioritzar intervencions personalitzades.
+              Model predictiu basat en Support Vector Machine (SVM) amb kernel RBF dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. El model prioritza la sensibilitat per actuar com una eina de cribratge en la decisió clínica.
           <h3>Version</h3>
               
   
-    <div>name: v1.0</div>
+    <div>name: v1.1</div>
 
               
   
@@ -93,7 +93,7 @@
               
                 <li><a href="Dades del projecte IAA 2025/26">Dades del projecte IAA 2025/26</a></li>
               
-                <li><a href="https://interpret.ml/docs/ebm.html (EBM documentation)">https://interpret.ml/docs/ebm.html (EBM documentation)</a></li>
+                <li><a href="https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html (SVM documentation)">https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html (SVM documentation)</a></li>
               
               </ul>
           
@@ -104,10 +104,10 @@
           <h2>Model Parameters</h2>
             
               <h3>Model Architecture</h3>
-                <div style="white-space:pre-wrap;">Explainable Boosting Machine (EBM)</div>
+                <div style="white-space:pre-wrap;">Support Vector Machine (SVM) amb kernel RBF</div>
             
               <h3>Input Format</h3>
-                <div style="white-space:pre-wrap;">Hiperparàmetres Clau: Learning Rate = 0.05, Max Leaves = 3, Interaccions = 10, Outer Bags = 8, Inner Bags = 0.</div>
+                <div style="white-space:pre-wrap;">Hiperparàmetres Clau: Kernel = RBF, C = 0.1, Gamma = auto, Class Weight = balanced.</div>
             
       
       
@@ -122,7 +122,7 @@
   
     <li>RECOMANACIÓ: Utilitzar com a eina de cribratge (screening) per identificar pacients amb alt risc.</li>
   
-    <li>ADVERTÈNCIA: Els resultats positius han de ser sempre validats per un especialista degut a la baixa precisió (40%).</li>
+    <li>ADVERTÈNCIA: Els resultats positius han de ser sempre validats per un especialista degut a la taxa de falsos positius.</li>
   
     <li>ADVERTÈNCIA: No utilitzar per a la presa de decisions automàtica sense supervisió humana.</li>
   
@@ -135,11 +135,11 @@
   
   <ul>
   
-    <li>PRECISIÓ BAIXA: El model genera un nombre elevat de falsos positius (pacients etiquetats com a TRS que no ho són).</li>
+    <li>COMPROMÍS PRECISIÓ-RECALL: El model sacrifica precisió global per garantir la detecció de la majoria de pacients TRS.</li>
   
-    <li>BIAIX DE DADES: El model s&#39;ha entrenat amb dades desbalancejades, la qual cosa pot afectar la seva fiabilitat en subgrups menys representats.</li>
+    <li>SENSIBILITAT A L&#39;ESCALAT: Requereix un preprocessament (StandardScaler) rigorós per funcionar correctament.</li>
   
-    <li>GENERALITZACIÓ: El rendiment pot variar si s&#39;aplica a poblacions amb característiques demogràfiques molt diferents a les de l&#39;entrenament.</li>
+    <li>GENERALITZACIÓ: El rendiment pot variar segons les característiques demogràfiques de la població aplicat.</li>
   
   </ul>
 
@@ -158,7 +158,7 @@
       <div class="row">
         <div class="col card">
           <h3>TRS Dataset (Clinical + Genetic)</h3>
-            <p>Entrenat amb un conjunt de dades de 7200 mostres i 26 variables. Inclou dades demogràfiques (edat, sexe), clíniques (IMC, durada psicosi), biomarcadors i marcadors genètics. Nota: Aquestes dades es consideren sensibles (informació mèdica).</p>
+            <p>Entrenat amb dades clíniques i genètiques de pacients amb esquizofrènia. Inclou dades demogràfiques, clíniques, biomarcadors i marcadors genètics. Nota: Aquestes dades es consideren sensibles (informació mèdica).</p>
             
             
             
@@ -176,7 +176,7 @@
     
       
 <div class="col card">
-  <h3>Accuracy - 0.59 </h3>
+  <h3>Accuracy - 0.56 </h3>
   
   
   <div>
@@ -191,7 +191,7 @@
     
       
 <div class="col card">
-  <h3>Recall (TRS) - 0.59 </h3>
+  <h3>Recall (TRS) - 0.63 </h3>
   
   
   <div>
@@ -206,12 +206,12 @@
     
       
 <div class="col card">
-  <h3>Precision (TRS) - 0.40 </h3>
+  <h3>Precision (TRS) - 0.38 </h3>
   
   
   <div>
     <b> Description: </b>
-    Proporció de prediccions &#34;TRS&#34; que són realment correctes (Valor Predictiu Positiu). 
+    Proporció de prediccions &#34;TRS&#34; que són realment correctes. 
   </div>
   
   
@@ -221,12 +221,27 @@
     
       
 <div class="col card">
-  <h3>F1-Score (TRS) - 0.47 </h3>
+  <h3>F1-Score (TRS) - 0.48 </h3>
   
   
   <div>
     <b> Description: </b>
     Mitjana harmònica entre precisió i recall per a la classe minoritària. 
+  </div>
+  
+  
+  
+</div>
+
+    
+      
+<div class="col card">
+  <h3>AUC - ROC - 0.62 </h3>
+  
+  
+  <div>
+    <b> Description: </b>
+    Capacitat de discriminació real entre les dues classes per sobre de l&#39;atzar. 
   </div>
   
   
@@ -246,13 +261,13 @@
   
     <div class="img-item">
     
-       <img src='data:image/png;base64,./images/26.png' alt='Matriu de Confusió (Figura 26)' />
+       <img src='data:image/png;base64,./images/181.png' alt='Matriu de Confusió (Figura 18)' />
     
     </div>
   
     <div class="img-item">
     
-       <img src='data:image/png;base64,./images/27.png' alt='Corba ROC (Figura 27)' />
+       <img src='data:image/png;base64,./images/191.png' alt='Corba ROC (Figura 19)' />
     
     </div>
   

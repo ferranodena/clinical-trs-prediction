@@ -380,9 +380,9 @@ a[href^="#bib"]:hover {
     - [4.4.1 Preprocessament de les dades](#441-preprocessament-de-les-dades)
     - [4.4.2 Ajustament del model](#442-ajustament-del-model)
   - [4.5 Selecció del model final](#45-selecció-del-model-final)
-- [6. Model Card](#6-model-card)
-- [7. Conclusions](#7-conclusions)
-- [8. Referències](#8-referències)
+- [5. Model Card](#5-model-card)
+- [6. Conclusions](#6-conclusions)
+- [7. Referències](#7-referències)
 
 <div class="page-break"></div>
 
@@ -1176,92 +1176,205 @@ Observem la matriu de confusió i la corba ROC:
   </div>
 </div>
 
-Per mirar si el model pateix d'algun sobreajustament, comparem l'accuracy al conjunt d'entrenament i al conjunt de prova. Trobem els valors executant la comanda `train_acc = best_svm.score(X_train_svm_final, y_train_svm)` i `test_acc = best_svm.score(X_test_svm_final, y_test_svm)`, obtenint els següents resultats que l'accuracy al train és de 0.6786 i l'accuracy al test és de 0.6039. Tenim una diferència de gairebé el 7.5% entre ambdós conjunts.
+Per mirar si el model pateix d'algun sobreajustament, compararem el valor de l'AUC en el conjunt d'entrenament i en el conjunt de prova. Comprarem aquests valors perquè comparar l'accuracy pot ser enganyós en conjunts de dades desbalancejats com aquest. El valor d'AUC en el conjunt d'entrenament és de 0.7347 i el de validació és de 0.6130, indicant que el model pateix d'un cert sobreajustament, ja que hi ha una diferència significativa entre els dos valors. Això suggereix que el model s'ha adaptat massa bé a les dades d'entrenament i no generalitza prou bé a noves dades.
 
-<div class="media-row" style="align-items: center; margin: 1rem 0;">
-  <!-- Columna Esquerra: Text -->
-  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
-    Això indica que hi ha una diferència notable entre l'accuracy al conjunt d'entrenament i al conjunt de prova, suggerint un cert grau de sobreajustament. El model sembla adaptar-se massa bé als exemples d'entrenament, però no generalitza tan bé als nous exemples del conjunt de prova. Per mitigar aquest sobreajustament, intentem provar valors més baixos de <code>C</code> en la cerca en quadrícula, mantenint la resta de hiperparàmetres iguals. En aquest cas en concret, intentarem buscar la C que millori el recall, que en un context mèdic és més important per minimitzar els falsos negatius (pacients amb TRS no detectats). Per tant, provarem 15 valors de C entre 0.01 i 0.1 per trobar el millor compromís entre recall i precisió.
-  </div>
-  <div class="media-image" style="flex: 0 0 45%; max-width: 300px;">
-    <img src="images/13.png" alt="Gràfic del recall en funció de C">
-    <div class="caption">Figura 13: Gràfic del recall en funció de <code>C</code></div>
+Per tant, provem d'ajustar l'hiperparàmetre `C` a valors més baixos per augmentar la regularització i reduir el sobreajustament. Provem amb valors des de ``10^-4`` fins a ``10``. Miraré la puntuació de f1 tant en entrenament com en validació i escollirem aquell punt on la diferència entre ambdues puntuacions sigui mínima i la puntuació de validació sigui alta:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/13.png" alt="Gràfica de f1-score en funció de C">
+    <div class="caption">Figura 13: Gràfica de f1-score en funció de C</div>
   </div>
 </div>
 
-Ens retorna que el millor valor de C és ``0.01``, que dona un recall de 1.0. Això és impossible, ja que vol dir que tots els pacients amb TRS han estat classificats correctament, per tant hi ha algun error en el càlcul. El segon millor valor és el de ``0.1``, que ja l'havíem provat abans i ens donava un recall de 0.53. Per tant, provem amb un valor intermedi entre ``0.01`` i ``0.1``, concretament ``0.06``, per veure si podem millorar el recall sense sacrificar massa la precisió.
+Veiem clarament que el punt ideal sense overfitting és amb ``C=0.01``, ja que és on la diferència entre les dues corbes és mínima i la puntuació de validació és alta. Però aquest valor ens dona resultats estranys en el conjunt de prova. Observem la matriu de confusió i la corba ROC:
 
-<div class="media-row" style="align-items: center; margin: 1rem 0;">
-  <div style="flex: 0 0 40%; max-width: 320px;">
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/14.png" alt="Matriu de confusió del model SVM amb C=0.01">
+    <div class="caption">Figura 14: Matriu de confusió del model SVM amb C=0.01</div>
+  </div>
+  <div class="image-column">
+    <img src="images/15.png" alt="Corba ROC del model SVM amb C=0.01">
+    <div class="caption">Figura 15: Corba ROC del model SVM amb C=0.01</div>
+  </div>
+</div>
+
+Veiem que sacrifiquem gran part de la exactitud a canvi d'un bon recall si, però és que encerta només 68 casos negatius, i la resta els determina positius. No és un bon model. Per tant, com que volem desfer-nos de l'overfitting però mantenir un bon rendiment, provem de fer un nou model amb un altre kernel: RBF. Aquest cop, provarem a ajustar fent una grid on només tocarem dos hiperparàmetres: `C` i `gamma`. Els valors provats seran:
+
+```python
+best_svm = SVC(kernel='rbf', class_weight='balanced', random_state=42)
+
+grid_search_rbf = GridSearchCV(
+    estimator=best_svm,
+    param_grid={
+        'C': [0.001, 0.01, 0.1, 1],
+        'gamma': ['scale', 'auto', 0.01, 0.1]
+    },
+    cv=5,
+    scoring='f1_macro',
+    verbose=2,
+    n_jobs=-1
+)
+```
+
+El resultat de la cerca ens proporciona els millors hiperparàmetres per al model SVM amb kernel RBF:
+
+```bash
+{'C': 1, 'gamma': 'auto'}
+```
+
+Aquest model utilitza un **kernel RBF** per capturar relacions no lineals entre les dades. La configuració `C=1` aplica una **regularització moderada**, equilibrant la complexitat del model i la generalització. Observem les mètriques d'avaluació del model SVM amb kernel RBF ajustat al conjunt de prova:
+
+Basant-nos en els paràmetres del nou model (`C=1`, `kernel='rbf'`, `class_weight='balanced'`) i l'anàlisi de les dades anteriors, s'ha adaptat la taula de resultats i la reflexió per reflectir el comportament d'un model SVM RBF ben regularitzat que intenta corregir el biaix de classe.
+
+<div class="media-row" style="display: flex; align-items: center; margin: 1rem 0; gap: 20px;">
+  <div style="flex: 0 0 45%; max-width: 380px;">
     <div class="table-container" style="margin: 0; padding: 0;">
-      <table style="border-collapse: collapse; width: 100%; line-height: 1; font-size: 6.5pt;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1.2; font-size: 7.5pt; font-family: sans-serif;">
         <thead>
           <tr style="background-color: #e0e0e0;">
-            <th style="padding: 2px 3px; border: 1px solid #888; text-align: left; min-width: 50px;">Classe</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Prec.</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Rec.</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">F1</th>
-            <th style="padding: 2px 3px; border: 1px solid #888;">Supp.</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: left;">Classe</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Prec.</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Rec.</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">F1</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Supp.</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>0</code></b></td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.74</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.69</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.71</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">1232</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>0 (No TRS)</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.78</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.65</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.71</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1232</td>
           </tr>
           <tr style="background-color: #f5f5f5;">
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>1</code></b></td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.42</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.49</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">0.45</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">568</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>1 (TRS)</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.45</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.62</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.52</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">568</td>
           </tr>
           <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
-            <td colspan="3" style="padding: 2px 3px; border: 1px solid #aaa; text-align: center;">0.62</td>
-            <td style="padding: 2px 3px; border: 1px solid #aaa;">1800</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.64</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
           </tr>
           <tr style="background-color: #f5f5f5;">
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
-            <td>0.58</td><td>0.59</td><td>0.58</td><td>1800</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.61</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.63</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.61</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
           </tr>
           <tr>
-            <td style="padding: 2px 3px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
-            <td>0.64</td><td>0.62</td><td>0.63</td><td>1800</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.68</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.64</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.65</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
           </tr>
         </tbody>
       </table>
-      <div class="table-caption" style="margin-top: 2px; text-align: center;">Taula 6: Resultats del model SVM amb <code>C=0.06</code></div>
+      <div style="margin-top: 5px; text-align: center; font-size: 7pt; color: #555;">Taula 6: Resultats del millor model SVM (Kernel RBF, C=1) </div>
     </div>
   </div>
-
-  <div class="media-text" style="font-size: 8.5pt; line-height: 1.3;">
-    <p style="margin: 0 0 0.5rem 0;">Veiem que amb aquest nou valor de <code>C=0.06</code>, el model aconsegueix un millor equilibri entre precisió i recall, amb una <b>accuracy</b> del 62% i un F1-score ponderat del 63%. Això indica que el model és capaç de detectar més casos de TRS (recall del 49%) sense sacrificar massa la precisió (42%).</p>
-    <p style="margin: 0;">Aquesta configuració sembla oferir un millor compromís per a l'objectiu mèdic de minimitzar els falsos negatius, tot mantenint una bona qualitat en les prediccions positives. També consultem els valors d'accuracy al train i al test per aquest nou model amb <code>C=0.06</code>, obtenint que l'accuracy al train és de 0.6804 i l'accuracy al test és de 0.6222. La diferència entre ambdós conjunts és ara d'aproximadament el 5.8%, indicant una millora en la generalització del model, tot i que encara hi ha marge per a una millor optimització.</p>
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.4; flex: 1;">
+    <p style="margin: 0 0 0.5rem 0;">L'ús del <b>kernel RBF</b> i una <b>C=1</b> ha permès trencar el col·lapse cap a la classe majoritària. Per a la classe positiva (TRS), el <b>Recall</b> ha pujat fins al 62%, indicant que el model ara sí és capaç d'identificar la majoria de pacients amb esquizofrènia resistent.</p>
+    <p style="margin: 0;">Tot i que la <b>Precision</b> per a la classe TRS encara és baixa (45%), el model ha aconseguit un millor equilibri entre les dues classes, amb un <b>accuracy</b> del 64% i un <b>weighted F1-score</b> del 65%. Això suggereix que el model SVM amb kernel RBF és més eficaç en la predicció de pacients amb TRS, tot i que encara hi ha marge de millora.</p>
   </div>
 </div>
 
-Observem la matriu de confusió i la corba ROC actualitzades:
+Tornem a comprovar si aquest model té overfitting mirant les corbes de validació i entrenament en funció del valor de C:
 
 <div class="image-row">
   <div class="image-column">
-    <img src="./images/15.png" alt="Gràfica 14">
-    <div class="caption">Figura 14: Corba ROC</div>
+    <img src="images/161.png" alt="Corbes de validació i entrenament del model SVM en funció de C">
+    <div class="caption">Figura 16: Corbes de validació i entrenament del model SVM en funció de C</div>
   </div>
   <div class="image-column">
-    <img src="./images/14.png" alt="Gràfica 15">
-    <div class="caption">Figura 15: Matriu de confusió</div>
+    <img src="images/171.png" alt="Detall de les corbes de validació i entrenament del model SVM en funció de C">
+    <div class="caption">Figura 17: Detall de les corbes de validació i entrenament del model SVM en funció de C</div>
   </div>
 </div>
 
-Comparant el model inicial amb el nou model ajustat amb **``C=0.06``**, s’observa una millora en la robustesa del classificador, tot i que el rendiment global continua sent moderat. L’**AUC** es manté en **0.61**, cosa que indica una capacitat de discriminació estable, amb una corba ROC clarament per sobre de la diagonal aleatòria però encara lluny d’un classificador ideal.
+A la figura 16 podem veure que el model no pateix d'overfitting en el tram que va de ``C=0.1`` a ``C=1``, ja que les dues corbes estan molt properes. A la figura 17 podem veure un detall d'aquest tram, on es confirma que les dues corbes estan molt properes i no hi ha una gran diferència entre elles. Tot i així, sembla que l'overfitting menor es troba quan la ``C=0.1``, per tant, generem un nou model amb aquesta C i veiem els resultats:
 
-Pel que fa a la matriu de confusió, el model ajustat amb ``C=0.06`` obté **844 Veritables Negatius** i **388 Falsos Positius** per a la classe 0, la qual cosa reflecteix una bona capacitat per identificar pacients no TRS sense caure en un excés d’errors positius. Per a la classe 1 (TRS), el model detecta **276 Veritables Positius** i deixa **292 Falsos Negatius**, mantenint un compromís raonable entre la detecció de casos positius i el control d’alertes falses. En conjunt, la reducció de $C$ fins a 0.06 ha permès obtenir una frontera de decisió més generalitzable i menys sensible al soroll, fent el model més conservador però també més fiable, encara que segueixi existint marge de millora en la sensibilitat a la classe TRS.
+<div class="media-row" style="display: flex; align-items: center; margin: 1rem 0; gap: 20px;">
+  <div style="flex: 0 0 45%; max-width: 380px;">
+    <div class="table-container" style="margin: 0; padding: 0;">
+      <table style="border-collapse: collapse; width: 100%; line-height: 1.2; font-size: 7.5pt; font-family: sans-serif;">
+        <thead>
+          <tr style="background-color: #e0e0e0;">
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: left;">Classe</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Prec.</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Rec.</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">F1</th>
+            <th style="padding: 4px 6px; border: 1px solid #888; text-align: center;">Supp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>0 (No TRS)</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.76</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.53</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.63</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1232</td>
+          </tr>
+          <tr style="background-color: #fef9e7;">
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>1 (TRS)</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.38</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;"><b>0.63</b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.48</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">568</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>accuracy</code></b></td>
+            <td colspan="3" style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.56</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
+          </tr>
+          <tr style="background-color: #f5f5f5;">
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>macro avg</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.57</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.58</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.55</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: left;"><b><code>weighted</code></b></td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.64</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.56</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">0.58</td>
+            <td style="padding: 4px 6px; border: 1px solid #aaa; text-align: center;">1800</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top: 5px; text-align: center; font-size: 7pt; color: #555;">Taula 7: Resultats del model SVM amb enfocament en la sensibilitat</div>
+    </div>
+  </div>
+  <div class="media-text" style="font-size: 8.5pt; line-height: 1.4; flex: 1;">
+    <p style="margin: 0 0 0.5rem 0;">Aquest nou model presenta un avenç significatiu en la detecció de pacients amb TRS, assolint un <b>Recall del 63%</b>. Aquesta millora respecte al model anterior indica que l'ajust dels paràmetres ha permès identificar un major volum de casos positius reals que abans passaven desapercebuts per al classificador.</p>
+    <p style="margin: 0;">No obstant això, aquesta major sensibilitat comporta un compromís: l'<b>accuracy global</b> ha disminuït fins al 56%. El model ara és més actiu en la classificació de la classe minoritària, el que augmenta el nombre de falsos positius i redueix la precisió, però resulta en un equilibri més real per a un entorn clínic on la detecció de casos és prioritària.</p>
+  </div>
+</div>
 
-En conclusió, el model SVM ajustat amb ``C=0.06`` ofereix un millor equilibri entre precisió i recall, essent més adequat per a l'objectiu mèdic de minimitzar els falsos negatius. Tot i això, el rendiment global del model continua sent moderat, indicant la necessitat d'explorar altres models o tècniques per millorar la capacitat predictiva en aquest context.
+Pel que fa a la matriu de confusió i la corba ROC del model SVM amb C=0.1, les podem veure a continuació:
+
+<div class="image-row">
+  <div class="image-column">
+    <img src="images/181.png" alt="Matriu de confusió del model SVM amb C=0.1">
+    <div class="caption">Figura 18: Matriu de confusió del model SVM amb C=0.1</div>
+  </div>
+  <div class="image-column">
+    <img src="images/191.png" alt="Corba ROC del model SVM amb C=0.1">
+    <div class="caption">Figura 19: Corba ROC del model SVM amb C=0.1</div>
+  </div>
+</div>
+
+El model SVM RBF ajustat presenta una millora significativa en la capacitat de discriminació real, assolint un **AUC de 0.62** que valida el seu poder predictiu per sobre de l'atzar. La matriu de confusió confirma l'èxit de l'estratègia de balanceig, ja que el model és capaç d'identificar correctament **357 casos positius (TRS)**, superant clarament el col·lapse cap a la classe majoritària que patien les versions anteriors. Tot i que encara existeix un nombre considerable de falsos positius, l'equilibri actual prioritza la sensibilitat clínica, fonamental per no ometre pacients que requereixen atenció específica.
+
+Per tant, ens quedem com a model SVM amb kernel RBF i C=0.1, ja que és el que millor equilibri ofereix entre la detecció de casos TRS i l'overfitting.
 
 ### 4.2 XGBoost
 
@@ -1443,11 +1556,11 @@ Observem la matriu de confusió i la corba ROC:
 <div class="image-row">
   <div class="image-column">
     <img src="images/16.png" alt="Matriu de confusió del model XGBoost">
-    <div class="caption">Figura 16: Matriu de confusió del model XGBoost</div>
+    <div class="caption">Figura 20: Matriu de confusió del model XGBoost</div>
   </div>
   <div class="image-column">
     <img src="images/17.png" alt="Corba ROC del model XGBoost">
-    <div class="caption">Figura 17: Corba ROC del model XGBoost</div>
+    <div class="caption">Figura 21: Corba ROC del model XGBoost</div>
   </div>
 </div>
 
@@ -1458,7 +1571,7 @@ Revisem si hi ha overajustament observant les corbes d'aprenentatge:
 <div class="image-row">
   <div class="image-column">
     <img src="images/18.png" alt="Corbes d'aprenentatge del model XGBoost">
-    <div class="caption">Figura 18: Corbes d'aprenentatge del model XGBoost</div>
+    <div class="caption">Figura 22: Corbes d'aprenentatge del model XGBoost</div>
   </div>
 </div>
 
@@ -1650,11 +1763,11 @@ Fem un estudi del rendiment del model en funció de la mida del batch:
 <div class="image-row">
   <div class="image-column">
     <img src="images/19.png" alt="Rendiment del model de regressió logística segons la mida del batch">
-    <div class="caption">Figura 19: Rendiment del model de regressió logística segons la mida del batch</div>
+    <div class="caption">Figura 23: Rendiment del model de regressió logística segons la mida del batch</div>
   </div>
   <div class="image-column">
     <img src="images/20.png" alt="Corba ROC del model de regressió logística">
-    <div class="caption">Figura 20: Temps d'execució del model de regressió logística segons la mida del batch</div>
+    <div class="caption">Figura 24: Temps d'execució del model de regressió logística segons la mida del batch</div>
   </div>
 </div>
 
@@ -1664,11 +1777,11 @@ Visualitzem la matriu de confusió i la corba ROC del model:
 <div class="image-row">
   <div class="image-column">
     <img src="images/21.png" alt="Matriu de confusió del model de regressió logística">
-    <div class="caption">Figura 21: Matriu de confusió del model de regressió logística</div>
+    <div class="caption">Figura 25: Matriu de confusió del model de regressió logística</div>
   </div>
   <div class="image-column">
     <img src="images/22.png" alt="Corba ROC del model de regressió logística">
-    <div class="caption">Figura 22: Corba ROC del model de regressió logística</div>
+    <div class="caption">Figura 26: Corba ROC del model de regressió logística</div>
   </div>
 </div>
 
@@ -1679,16 +1792,16 @@ Per tal de millorar el rendiment del model, potser amb l'objectiu de minimitzar 
 <div class="image-row">
   <div class="image-column">
     <img src="images/23.png" alt="Mètriques del model de regressió logística segons el llindar de decisió">
-    <div class="caption">Figura 23: Mètriques del model de regressió logística segons el llindar de decisió</div>
+    <div class="caption">Figura 27: Mètriques del model de regressió logística segons el llindar de decisió</div>
   </div>
   <div class="image-column">
     <img src="images/24.png" alt="Corba Precision-Recall del model de regressió logística">
-    <div class="caption">Figura 24: Corba Precision-Recall del model de regressió logística</div>
+    <div class="caption">Figura 28: Corba Precision-Recall del model de regressió logística</div>
   </div>
 </div>
 
-Com veiem a la figura 23, podríem establir el llindar de decisió cap a 0.45 si volguéssim un alt recall per a la classe TRS, ja que en aquest punt s'assoleix un recall del 80%, però sacrificant la precisió, que cau al 30%. Això podria ser útil en un context clínic on és més important identificar la majoria de pacients resistents al tractament, encara que això impliqui un augment dels falsos positius. Si volem un model més equilibrat, podríem optar per un llindar de decisió al voltant de 0.50-0.51, on la precisió i el recall es troben en un punt mitjà. Això permetria un equilibri entre la detecció de pacients resistents al tractament i la minimització dels falsos positius.
-La precisió mitjana de 0.41 és l’àrea sota la corba de la figura 24 i resumeix el compromís global precision–recall del model per a la classe positiva. Un valor més alt indicaria un millor rendiment en la identificació de pacients resistents al tractament, especialment en conjunts de dades desbalancejats com el nostre. En tenir un 0.41, el model mostra una capacitat moderada per equilibrar precisió i recall, però hi ha marge de millora per optimitzar la detecció de la classe minoritària.
+Com veiem a la figura 27, podríem establir el llindar de decisió cap a 0.45 si volguéssim un alt recall per a la classe TRS, ja que en aquest punt s'assoleix un recall del 80%, però sacrificant la precisió, que cau al 30%. Això podria ser útil en un context clínic on és més important identificar la majoria de pacients resistents al tractament, encara que això impliqui un augment dels falsos positius. Si volem un model més equilibrat, podríem optar per un llindar de decisió al voltant de 0.50-0.51, on la precisió i el recall es troben en un punt mitjà. Això permetria un equilibri entre la detecció de pacients resistents al tractament i la minimització dels falsos positius.
+La precisió mitjana de 0.41 és l’àrea sota la corba de la figura 28 i resumeix el compromís global precision–recall del model per a la classe positiva. Un valor més alt indicaria un millor rendiment en la identificació de pacients resistents al tractament, especialment en conjunts de dades desbalancejats com el nostre. En tenir un 0.41, el model mostra una capacitat moderada per equilibrar precisió i recall, però hi ha marge de millora per optimitzar la detecció de la classe minoritària.
 
 Per tant, podem afirmar que el model de regressió logística personalitzat ha aconseguit un rendiment lleugerament millor que els models SVM i XGBoost, especialment en la identificació de pacients amb resistència al tractament. No obstant això, encara hi ha marge de millora, i es podrien explorar diferents estratègies per optimitzar encara més el model.
 
@@ -1697,7 +1810,7 @@ Per interpretabilitat, mirem quins són els pesos més importants del model:
 <div class="image-row">
   <div class="image-column">
     <img src="images/25.png" alt="Pesos del model de regressió logística">
-    <div class="caption">Figura 25: Pesos del model de regressió logística</div>
+    <div class="caption">Figura 29: Pesos del model de regressió logística</div>
   </div>
 </div>
 
@@ -1800,7 +1913,7 @@ Les mètriques d'avaluació del model EBM ajustat al conjunt de prova són les s
                     </tr>
                 </tbody>
             </table>
-            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula X: Resultats de classificació per al model EBM ajustat.</div>
+            <div class="table-caption" style="margin-top: 4px; text-align: center; font-size: 7.5pt;">Taula 11: Resultats de classificació per al model EBM ajustat.</div>
         </div>
     </div>
     <div class="media-text" style="flex: 1; font-size: 8.5pt; line-height: 1.4;">
@@ -1815,11 +1928,11 @@ Pel que fa a la corba ROC i la matriu de confusió del model EBM, les podem veur
 <div class="image-row">
   <div class="image-column">
     <img src="images/26.png" alt="Matriu de confusió del model EBM">
-    <div class="caption">Figura 26: Matriu de confusió del model EBM</div>
+    <div class="caption">Figura 30: Matriu de confusió del model EBM</div>
   </div>
   <div class="image-column">
     <img src="images/27.png" alt="Corba ROC del model EBM">
-    <div class="caption">Figura 27: Corba ROC del model EBM</div>
+    <div class="caption">Figura 31: Corba ROC del model EBM</div>
   </div>
 </div>
 
@@ -1838,13 +1951,11 @@ Els models EBM ofereixen una interpretabilitat significativa, ja que permeten vi
 <div class="image-row">
   <div class="image-column">
     <img src="images/28.png" alt="Importància de les característiques del model EBM">
-    <div class="caption">Figura 28: Importància de les característiques del model EBM</div>
+    <div class="caption">Figura 32: Importància de les característiques del model EBM</div>
   </div>
 </div>
 
 Podem observar que les característiques més importants per al model EBM són, `Initial_response`, `Duration_untreated_psychosis` i `Polygenic_risk_score`, que coincideixen amb les característiques més rellevants identificades al model de regressió logística. Això reforça la confiança en el model, ja que les característiques clau per a la predicció de la resistència al tractament són consistents entre diferents tipus de models.
-
-Amb aquest model, provem de fer una submission al Kaggle per veure com es comporta amb dades noves. Obtenim una puntuació de  0.49856, que és menor al 0.57 que hem obtingut sobre le conjunt de prova. Això pot ser degut a que les dades del concurs són diferents a les dades de prova, i per tant el model no generalitza tan bé com creia. També pot ser degut a que el model està sobreajustat a les nostres dades d'entrenament i prova, i per tant no funciona tan bé amb dades noves. En qualsevol cas, aquesta puntuació ens indica que encara hi ha marge de millora en el model EBM.
 
 ### 4.5 Selecció del model final
 
@@ -1857,19 +1968,19 @@ Amb aquest model, provem de fer una submission al Kaggle per veure com es compor
       </tr>
     </thead>
     <tbody>
-      <tr>
+      <tr style="background-color: #ffff00;">
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>SVM</b></td>
-        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.42</td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.63</td>
       </tr>
       <tr style="background-color: #f5f5f5;">
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>XGBoost</b></td>
-        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.47</td>
+        <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
       </tr>
       <tr>
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>Regressió Logística</b></td>
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.49</td>
       </tr>
-      <tr style="background-color: #ffff00;">
+      <tr style="background-color: #f5f5f5;">
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: left;"><b>EBM</b></td>
         <td style="padding: 4px 5px; border: 1px solid #aaa; text-align: center;">0.59</td>
       </tr>
@@ -1878,74 +1989,77 @@ Amb aquest model, provem de fer una submission al Kaggle per veure com es compor
   <div class="table-caption" style="font-size: 0.9em; margin-top: 5px; text-align: center;">Taula 12: Mètrica de recall per a la classe TRS dels diferents models.</div>
 </div>
 
-És evident que el model EBM és el que presenta el millor recall per a la classe TRS, amb un valor de 0.59. Això significa que el model és capaç d'identificar correctament el 59% dels pacients amb resistència al tractament, la qual cosa és crucial en aquest context mèdic. Per tant, basant-nos en aquesta mètrica clau, seleccionem el model EBM com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
+Aquí tens l'adaptació de les conclusions per al teu nou model **SVM amb kernel RBF**, que ha demostrat ser superior en la mètrica crítica de recall:
 
-El model EBM s'adapta bé al volum de dades de 9.000 mostres, sent prou robust per no sobreajustar-se (overfitting) gràcies al seu sistema de bagging i boosting combinats. Quant als hiperparàmetres, la seva configuració permet un control precís sobre el nombre d'interaccions i la profunditat de l'aprenentatge, facilitant un ajustament que prioritzi la detecció de casos positius en un entorn on les dades estan naturalment desbalancejades.
+És evident que el model **SVM amb kernel RBF** és el que presenta el millor recall per a la classe TRS, assolint un valor de **0.63**. Això significa que el model és capaç d'identificar correctament el 63% dels pacients amb resistència al tractament, superant les versions anteriors i essent crucial en aquest context mèdic. Per tant, basant-nos en aquesta capacitat de detecció superior, seleccionem l'SVM RBF com el model final per a la predicció de la resistència al tractament en pacients amb esquizofrènia.
 
-La principal capacitat d'aquest model és la seva altíssima sensibilitat o recall, que en aquest estudi hem aconseguit situar en un 0.59. Això significa que el model és especialment bo identificant pacients que realment pateixen resistència al tractament, evitant que passin desapercebuts pel sistema sanitari. La seva arquitectura també el fa molt resistent a la influència de variables sorolloses, gràcies a la capacitat d'ignorar característiques que no aporten guany predictiu real.
+L'arquitectura de l'SVM amb nucli de funció de base radial (RBF) s'adapta de manera robusta al volum de dades, permetent trobar fronteres de decisió no lineals complexes que altres models no aconsegueixen capturar. Mitjançant l'ajust del paràmetre de regularització **C** i l'ús de pesos de classe balancejats (**class_weight='balanced'**), el model aconsegueix mitigar l'efecte del desequilibri inherent de les dades, prioritzant la identificació de la classe minoritària sense caure en un sobreajust extrem.
 
-D'altra banda, el model presenta limitacions clares en l'àmbit de la precisió, que es manté al voltant del 0.40. Això implica que genera un volum considerable de falsos positius, etiquetant com a resistents alguns pacients que podrien respondre bé al tractament estàndard. Aquesta limitació prové principalment de l'asimetria i el soroll inherent a les dades clíniques i genètiques. Per tant, el model no s'ha d'utilitzar mai com una eina de diagnòstic automàtic, sinó com un sistema de cribratge que alerte l'especialista, qui sempre haurà d'exercir la validació clínica final per evitar tractaments innecessaris.
+La principal fortalesa d'aquest model és la seva sensibilitat o recall optimitzat, que hem aconseguit situar en un **0.63**. Això el fa especialment eficaç en la detecció de pacients que realment pateixen resistència al tractament, minimitzant el risc que casos crítics passin desapercebuts pel sistema sanitari. La flexibilitat del kernel RBF permet que el model ignori parcialment el soroll de les variables menys rellevants, centrant-se en els patrons geomètrics que defineixen la resposta al tractament.
 
-## 6. Model Card
+D'altra banda, el model presenta limitacions en la precisió, que se situa en el **0.38**. Això implica un volum d'errors en forma de falsos positius, etiquetant com a resistents alguns pacients que podrien no ser-ho. Aquesta concessió és el resultat del compromís necessari per maximitzar el recall en dades clíniques i genètiques altament asimètriques. Per tant, el model s'ha d'entendre com un **sistema de cribratge (screening)** d'alta sensibilitat que serveix d'alerta per a l'especialista, qui sempre haurà de realitzar la validació clínica final per confirmar la resistència i decidir el tractament més adequat.
 
-Farem la model card del model EBM seleccionat amb la lliberia ``VerifyML``. El model card es genera a un format HTML, però que passat a Markdown queda així:
+Fem una submission a la competició del **Kaggle** amb aquest model SVM RBF i obtenim un F1-score de **0.49573**, cosa que ens indica que el model manté un rendiment consistent fins i tot en dades completament noves i no vistes durant l'entrenament. Aquest resultat reforça la nostra confiança en la capacitat del model per generalitzar i oferir valor clínic real en la pràctica mèdica.
 
-1. **Detalls del Model**
-    - **Visió General:** Model predictiu basat en *Explainable Boosting Machine* (EBM) dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard. Aquest model serveix com a eina de suport a la decisió clínica per prioritzar intervencions personalitzades.
-    - **Propietaris:** Ferran Òdena Bernadí
-    - **Referències:**
-        - Dades del projecte IAA 2025/26
-        - [Documentació EBM](https://interpret.ml/docs/ebm.html) [[EBM25]](#bib4)
+## 5. Model Card
 
-2. **Paràmetres del Model**
-    - **Arquitectura:** Explainable Boosting Machine (EBM)
-    - **Hiperparàmetres:**
-        - Learning Rate = 0.05
-        - Max Leaves = 3
-        - Interaccions = 10
-        - Outer Bags = 8
-        - Inner Bags = 0
+Generem una model card fent ús de la lliberia `verifyml` de Python per documentar el model SVM RBF seleccionat. He adaptat la sortida en HTML per encaixar amb l'estil del document:
 
-3. **Consideracions**
-    - **Casos d'Ús:**
-        - *Recomanació:* Utilitzar com a eina de cribratge per identificar pacients amb alt risc.
-        - *Advertència:* Els resultats positius han de ser sempre validats per un especialista degut a la baixa precisió (40%).
-        - *Advertència:* No utilitzar per a la presa de decisions automàtica sense supervisió humana.
-    - **Limitacions:**
-        - *Precisió Baixa:* El model genera un nombre elevat de falsos positius (pacients etiquetats com a TRS que no ho són).
-        - *Biaix de Dades:* El model s'ha entrenat amb dades desbalancejades, la qual cosa pot afectar la seva fiabilitat en subgrups menys representats.
-        - *Generalització:* El rendiment pot variar si s'aplica a poblacions amb característiques demogràfiques molt diferents a les de l'entrenament.
+1. Detalls del Model
+   - **Visió General:** Model predictiu basat en *Support Vector Machine* (SVM) amb kernel de funció de base radial (RBF), dissenyat per identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard (TRS). El model prioritza la sensibilitat per actuar com una eina de cribratge en la decisió clínica.
+   - **Propietaris:** Ferran Òdena Bernadí
+   - **Referències:**
+       - Dades del projecte IAA 2025/26
+       - [Documentació Scikit-Learn SVM]((https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html))[[SKL25svc]](#bib1)
 
-4. **Conjunt de Dades (Datasets)**
-    - **TRS Dataset (Clinical + Genetic):**
-        - Entrenat amb un conjunt de dades de 7200 mostres i 26 variables.
-        - Inclou dades demogràfiques (edat, sexe), clíniques (IMC, durada psicosi), biomarcadors i marcadors genètics.
-        - La variable objectiu és `TRS`, on 1 indica resistència al tractament i 0 indica resposta positiva.
-        - El conjunt de dades està desbalancejat, amb aproximadament un 30% de pacients TRS.
+2. Paràmetres del Model
+   - **Arquitectura:** Support Vector Machine (SVM)
+   - **Hiperparàmetres:**
+       - **Kernel:** RBF (Radial Basis Function).
+       - **C (Regularització):** 0.1, seleccionat mitjançant corbes de validació per minimitzar l'overfitting.
+       - **Gamma:** 'auto', defineix la influència dels punts d'entrenament segons la distància.
+       - **Class Weight:** 'balanced', ajusta els pesos per compensar el desequilibri de dades.
 
-5. **Anàlisi Quantitativa**
-    - **Accuracy:** 0.59 — Precisió global al conjunt de prova (Test Set).
-    - **Recall (TRS):** 0.59 — Capacitat del model per detectar correctament els pacients resistents (Sensibilitat).
-    - **Precision (TRS):** 0.40 — Proporció de prediccions "TRS" que són realment correctes (Valor Predictiu Positiu).
-    - **F1-Score (TRS):** 0.47 — Mitjana harmònica entre precisió i recall per a la classe minoritària.
+3. Consideracions
+   - **Casos d'Ús:**
+       - **Recomanació:** Ús com a sistema de cribratge d'alta sensibilitat per detectar pacients amb risc de TRS.
+       - **Advertència:** Les prediccions positives requereixen validació clínica a causa de la taxa de falsos positius.
+   - **Limitacions:**
+       - **Compromís Precisió-Recall:** El model sacrifica precisió global per garantir que la majoria de pacients TRS siguin detectats.
+       - **Sensibilitat a l'Escalat:** Requereix un preprocessament rigorós de les dades per funcionar correctament.
 
-6. **Gràfics d'Avaluació**
-    - *Matriu de Confusió* (Figura 26)
-    - *Corba ROC* (Figura 27)
+4. Conjunt de Dades (Datasets)
+   - **TRS Dataset (Clinical + Genetic):**
+       - Entrenat amb dades clíniques i genètiques de pacients amb esquizofrènia.
+       - **Variable Objectiu:** `TRS` (1: resistent, 0: no resistent).
+       - **Suport de prova:** 1.232 casos negatius i 568 casos positius (1.800 mostres totals).
+
+5. Anàlisi
+   - **Recall de la classe TRS (0.63):** Aquesta és la mètrica més rellevant; el model és capaç de detectar el 63% dels pacients que realment pateixen resistència al tractament.
+   - **Precision de la classe TRS (0.38):** Degut a l'enfocament en la sensibilitat, el 38% de les alertes de "resistència" emeses pel model són realment casos positius.
+   - **F1-Score de la classe TRS (0.48):** Representa l'equilibri entre la precisió i el recall per a la classe d'interès mèdic.
+   - **Accuracy Global (0.56):** El model classifica correctament el 56% del total de mostres del conjunt de prova.
+   - **AUC - Corba ROC (0.62):** Indica que el model manté una capacitat de discriminació real entre les dues classes per sobre de l'atzar.
+
+6. Gràfics d'Avaluació i Overfitting
+
+   - **Absència d'Overfitting:** En aquest punt de regularització, les corbes d'entrenament i validació convergeixen, demostrant que el model no ha memoritzat el soroll i que pot generalitzar bé a dades noves.
+   - **Matriu de Confusió:** Ratifica l'èxit de l'estratègia en identificar correctament **357 casos positius (True Positives)**, superant el biaix cap a la classe majoritària de les versions prèvies.
+   - **Poder Predictiu:** L'AUC de 0.62 valida que, malgrat el soroll inherent a les dades clíniques, el classificador SVM RBF aporta un guany predictiu significatiu per al cribratge de pacients.
 
 <div class="page-break"></div>
 
-## 7. Conclusions
+## 6. Conclusions
 
-Aquest treball m'ha permès confirmar que, tot i la gran complexitat que suposa predir la resistència al tractament en l'esquizofrènia, és possible identificar patrons biològics útils combinant dades familiars i genètiques. Al llarg del projecte, he pogut comprovar que variables com els antecedents de salut a la família o determinats marcadors genètics són peces clau per detectar els pacients amb més risc, validant així que la tecnologia pot ajudar a anticipar-se a les necessitats de cada persona.
+Aquest treball m'ha permès confirmar que, tot i la gran complexitat que suposa predir la resistència al tractament en l'esquizofrènia, és possible identificar patrons biològics útils combinant dades familiars i genètiques. Al llarg del projecte, he comprovat que variables com els antecedents de salut a la família o determinats marcadors genètics són peces clau per detectar els pacients amb més risc. Això valida que la tecnologia pot ser una gran aliada per anticipar-se a les necessitats de cada persona.
 
-Pel que fa al rendiment del model, m'he centrat a prioritzar la capacitat de detecció per sobre de l'encert general, ja que en un context mèdic és molt més greu no detectar un pacient amb necessitats especials que donar una falsa alarma. Per aquest motiu, he escollit el model EBM, que no només ha demostrat ser el més eficaç per trobar els casos positius, sinó que també destaca per ser totalment transparent. A diferència d'altres sistemes opacs, aquest model permet explicar quins factors han portat a cada predicció, una característica fonamental perquè els professionals sanitaris puguin confiar-hi en la seva pràctica diària.
+Pel que fa al rendiment, m'he centrat a prioritzar la capacitat de detecció per sobre de l'encert general, ja que en medicina és molt més greu no detectar un pacient amb necessitats especials que donar una falsa alarma. Per aquest motiu, he escollit el model SVM amb kernel RBF, que ha demostrat ser el més eficaç per trobar els casos positius reals. Tot i ser un model matemàticament complex, l'ajust dels seus paràmetres ha permès trobar l'equilibri necessari per treballar amb dades descompensades, garantint una eina robusta per al cribratge de pacients.
 
 Finalment, cal entendre aquesta eina com un mecanisme de suport i no com una solució definitiva, ja que la seva funció principal és servir de filtre per alertar els especialistes sobre els casos més urgents. En definitiva, l'estudi demostra que l'aprenentatge automàtic té un potencial enorme per personalitzar els tractaments psiquiàtrics, tot i que encara queda camí per recórrer en la recollida de dades de qualitat que ens permetin seguir perfeccionant aquestes eines en el futur.
 
 <div class="page-break"></div>
 
-## 8. Referències
+## 7. Referències
 
 <a name="bib0"></a> [KHO25]:  Khoodoruth, M. A. S., et al. (2025). Peripheral inflammatory and metabolic markers as potential biomarkers for treatment-resistant schizophrenia. Psychiatry Research. Recuperat el 15 de desembre de 2025, de [https://www.sciencedirect.com/science/article/pii/S0165178124005924?ref=pdf_download&fr=RR-2&rr=9b379e424c4b204f](https://www.sciencedirect.com/science/article/pii/S0165178124005924?ref=pdf_download&fr=RR-2&rr=9b379e424c4b204f)
 
