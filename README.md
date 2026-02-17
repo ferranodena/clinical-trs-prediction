@@ -1,25 +1,31 @@
-# 🧠 Predicció de la Resistència al Tractament en l'Esquizofrènia (TRS)
+### 🧠 Predicting Treatment-Resistant Schizophrenia (TRS)
 
-Aquest repositori conté el projecte desenvolupat per al laboratori de l'assignatura **Introducció a l'Aprenetatge Automàtic (IAA)** de la **UPC** (Curs 2025/26). L'objectiu és construir un model predictiu capaç d'identificar pacients amb esquizofrènia que presenten resistència al tractament antipsicòtic estàndard (Treatment-Resistant Schizophrenia, TRS).
+This repository contains the project developed for the **Introduction to Machine Learning (IAA)** laboratory at **UPC** (Academic Year 2025/26). The objective is to build a predictive model capable of identifying patients with schizophrenia who exhibit resistance to standard antipsychotic treatment (Treatment-Resistant Schizophrenia, TRS).
 
-## 📋 Resum del Projecte
+### Project Overview
 
-La identificació precoç del TRS és un repte clínic fonamental. Aquest projecte utilitza un conjunt de dades multimodals (clíniques, genètiques i de neuroimatge) de 9.000 pacients per donar suport a la decisió mèdica mitjançant aprenentatge automàtic.
+Early identification of TRS remains a critical clinical challenge. This project leverages a multimodal dataset—incorporating clinical, genetic, and neuroimaging data from 9,000 patients—to provide decision support in medical environments through machine learning.
 
-### Models Implementats
+### Implemented Models
 
-- **SVM (Support Vector Machine)**: Amb preprocessament de normalització i PCA.
-- **XGBoost**: Optimitzat per gestionar el desbalanceig de dades.
-- **Regressió Logística Custom**: Implementació des de zero amb descens de gradient per mini-batches.
-- **EBM (Explainable Boosting Machine)**: Model final seleccionat per la seva transparència i alt recall.
+- **SVM (Support Vector Machine):** Developed using normalization preprocessing and Principal Component Analysis (PCA).
+- **XGBoost:** Optimized specifically to handle class imbalance within the dataset.
+- **Custom Logistic Regression:** Implemented from scratch using mini-batch gradient descent.
+- **EBM (Explainable Boosting Machine):** The final selected model, chosen for its transparency and high recall.
 
-## 🚀 Model Final Seleccionat: EBM
+### Selected Final Model: EBM
 
-S'ha escollit el model **Explainable Boosting Machine (EBM)** com a solució òptima degut a la seva natura de "caixa de vidre", que permet interpretar cada predicció en un entorn clínic real.
+The **Explainable Boosting Machine (EBM)** was selected as the optimal solution due to its "glass-box" nature. This interpretability is essential in a real-world clinical setting, as it allows practitioners to understand the factors driving each individual prediction.
 
-### Rendiment (Test Set)
+### Performance (Test Set)
 
-- **Accuracy**: 0.59
-- **Recall (TRS)**: 0.59 (Prioritzat per minimitzar falsos negatius clínics)
-- **Precision (TRS)**: 0.40
-- **F1-Score**: 0.47
+- **Accuracy:** 0.59
+- **Recall (TRS):** 0.59 (Prioritized to minimize clinical false negatives)
+- **Precision (TRS):** 0.40
+- **F1-Score:** 0.47
+
+### Data Source and Citation
+
+The clinical foundation and biomarkers utilized in this study are based on the research conducted by Khoodoruth et al. (2025):
+
+- **Reference:** Khoodoruth, M. A. S., et al. (2025). "Peripheral inflammatory and metabolic markers as potential biomarkers in treatment-resistant schizophrenia: Insights from a Qatari Cohort." *Psychiatry Research*, 344, 116307. [https://doi.org/10.1016/j.psychres.2024.116307](https://doi.org/10.1016/j.psychres.2024.116307).
